@@ -14,23 +14,84 @@
  * limitations under the License.
  */
 
-'use strict';
+"use strict";
 
-const functions = require('firebase-functions');
-const {smarthome} = require('actions-on-google');
-const {google} = require('googleapis');
-const util = require('util');
-const admin = require('firebase-admin');
+// require("firebase-functions/logger/compat");
+const functions = require("firebase-functions");
+const { smarthome } = require("actions-on-google");
+const { google } = require("googleapis");
+const util = require("util");
+const admin = require("firebase-admin");
+const logger = require("firebase-functions/logger");
+const mqtt = require("mqtt");
+
+var options = {
+  host: "afdc512217a942639f02c4cf4cce5fd0.s1.eu.hivemq.cloud",
+  port: 8883,
+  protocol: "mqtts",
+  username: "fcroce",
+  password: "34023936Fc",
+};
+
+// initialize the MQTT client
+var client = mqtt.connect(options);
+
+// setup the callbacks
+client.on("connect", function () {
+  console.log("Connected");
+});
+
+client.on("error", function (error) {
+  console.log(error);
+});
+
+client.on("message", function (topic, message) {
+  // called each time a message is received
+  console.log("Received message:", topic, message.toString());
+});
+
 // Initialize Firebase
 admin.initializeApp();
-const firebaseRef = admin.database().ref('/');
+const firebaseRef = admin.database().ref("/");
+const auth = new google.auth.GoogleAuth({
+  scopes: "https://www.googleapis.com/auth/homegraph",
+});
+const homegraph = google.homegraph({
+  version: "v1",
+  auth: auth,
+});
 
 // Hardcoded user ID
-const USER_ID = '123';
+const USER_ID = "123";
+
+const commands = {
+  // {[commandName]: traitName} => {SetFanSpeed: FanSpeed} (HomeGraph)
+  OnOff: { traitName: "OnOff", stateKey: "on" },
+  BrightnessAbsolute: { traitName: "Brightness", stateKey: "brightness" },
+  ColorAbsolute: { traitName: "ColorSetting", stateKey: "color" },
+  // SetFanSpeed: { attribute:"FanSpeed",
+  // SetModes: { attribute:"Modes",
+  // ThermostatTemperatureSetpoint: { attribute:"TemperatureSetting",
+  // ThermostatSetMode: { attribute:"TemperatureSetting",
+  // ThermostatTemperatureSetRange: "TemperatureSetting",
+};
+
+const filterHomeGraphConfigByTraitName = (keyParam) => {
+  return Object.entries(HomeGraphConfig).reduce((accum, [key, value]) => {
+    console.log({ value }, { keyParam }, value.traitName === keyParam);
+    if (value.traitName === keyParam) {
+      return {
+        key,
+        value,
+      };
+    }
+    return accum;
+  }, {});
+};
 
 exports.login = functions.https.onRequest((request, response) => {
-  if (request.method === 'GET') {
-    functions.logger.log('Requesting login page');
+  if (request.method === "GET") {
+    functions.logger.log("Requesting login page");
     response.send(`
     <html>
       <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -45,7 +106,7 @@ exports.login = functions.https.onRequest((request, response) => {
       </body>
     </html>
   `);
-  } else if (request.method === 'POST') {
+  } else if (request.method === "POST") {
     // Here, you should validate the user account.
     // In this sample, we do not do that.
     const responseurl = decodeURIComponent(request.body.responseurl);
@@ -53,211 +114,139 @@ exports.login = functions.https.onRequest((request, response) => {
     return response.redirect(responseurl);
   } else {
     // Unsupported method
-    response.send(405, 'Method Not Allowed');
+    response.send(405, "Method Not Allowed");
   }
 });
 
-
 exports.fakeauth = functions.https.onRequest((request, response) => {
-  const responseurl = util.format('%s?code=%s&state=%s',
-      decodeURIComponent(request.query.redirect_uri), 'xxxxxx',
-      request.query.state);
+  const responseurl = util.format(
+    "%s?code=%s&state=%s",
+    decodeURIComponent(request.query.redirect_uri),
+    "xxxxxx",
+    request.query.state
+  );
   functions.logger.log(`Set redirect as ${responseurl}`);
   return response.redirect(
-      `/login?responseurl=${encodeURIComponent(responseurl)}`);
+    `/login?responseurl=${encodeURIComponent(responseurl)}`
+  );
 });
 
 exports.faketoken = functions.https.onRequest((request, response) => {
-  const grantType = request.query.grant_type ?
-    request.query.grant_type : request.body.grant_type;
+  const grantType = request.query.grant_type
+    ? request.query.grant_type
+    : request.body.grant_type;
   const secondsInDay = 86400; // 60 * 60 * 24
   const HTTP_STATUS_OK = 200;
   functions.logger.log(`Grant type ${grantType}`);
 
   let obj;
-  if (grantType === 'authorization_code') {
+  if (grantType === "authorization_code") {
     obj = {
-      token_type: 'bearer',
-      access_token: '123access',
-      refresh_token: '123refresh',
+      token_type: "bearer",
+      access_token: "123access",
+      refresh_token: "123refresh",
       expires_in: secondsInDay,
     };
-  } else if (grantType === 'refresh_token') {
+  } else if (grantType === "refresh_token") {
     obj = {
-      token_type: 'bearer',
-      access_token: '123access',
+      token_type: "bearer",
+      access_token: "123access",
       expires_in: secondsInDay,
     };
   }
-  response.status(HTTP_STATUS_OK)
-      .json(obj);
+  response.status(HTTP_STATUS_OK).json(obj);
 });
 
-let jwt
+let jwt;
 try {
-  jwt = require('./smart-home-key.json')
+  jwt = require("./smart-home-key.json");
 } catch (e) {
-  functions.logger.warn('Service account key is not found')
-  functions.logger.warn('Report state and Request sync will be unavailable')
+  functions.logger.warn("Service account key is not found");
+  functions.logger.warn("Report state and Request sync will be unavailable");
 }
 
 const app = smarthome({
   jwt: jwt,
   debug: true,
-})
+});
 
-let devicelist
-devicelist = require('./devices.json')
+let devicelist;
+devicelist = require("./devices.json");
 const deviceitems = JSON.parse(JSON.stringify(devicelist));
 
 var devicecounter;
 
 app.onSync((body) => {
-  functions.logger.log('onSync');
-  for (devicecounter = 0; devicecounter < deviceitems.length; devicecounter++) {
-    if (deviceitems[devicecounter].traits.includes('action.devices.traits.TemperatureSetting')) {
-      if (deviceitems[devicecounter].attributes.queryOnlyTemperatureSetting == true) {
-        firebaseRef.child(deviceitems[devicecounter].id).child('TemperatureSetting').set({thermostatMode: "off", thermostatTemperatureAmbient: 20, thermostatHumidityAmbient: 90});
-      } else if (deviceitems[devicecounter].attributes.queryOnlyTemperatureSetting == false) {
-        firebaseRef.child(deviceitems[devicecounter].id).child('TemperatureSetting').set({thermostatMode: "off", thermostatTemperatureSetpoint: 25.5, thermostatTemperatureAmbient: 20, thermostatHumidityAmbient: 90, thermostatTemperatureSetpointLow: 15, thermostatTemperatureSetpointHigh: 30});
+  firebaseRef.once("value", (snapshot) => {
+    const children = snapshot.val();
+    for (
+      devicecounter = 0;
+      devicecounter < deviceitems.length;
+      devicecounter++
+    ) {
+      const device = deviceitems[devicecounter];
+      const { traits } = device;
+      const deviceRef = firebaseRef.child(device.id);
+
+      if (!children || !children[device.id]) {
+        for (let indexTrait = 0; indexTrait < traits.length; indexTrait++) {
+          const trait = traits[indexTrait];
+          const traitName = trait.split("action.devices.traits.")[1];
+          deviceRef.child(traitName).set("");
+        }
       }
     }
-    if (deviceitems[devicecounter].traits.includes('action.devices.traits.OnOff')) {
-      firebaseRef.child(deviceitems[devicecounter].id).child('OnOff').set({on: false});
-    }
-    if (deviceitems[devicecounter].traits.includes('action.devices.traits.Brightness')) {
-      firebaseRef.child(deviceitems[devicecounter].id).child('Brightness').set({brightness: 10});
-    }
-    if (deviceitems[devicecounter].traits.includes('action.devices.traits.ColorSetting')) {
-      firebaseRef.child(deviceitems[devicecounter].id).child('ColorSetting').set({color: {name: "deep sky blue", spectrumRGB: 49151}});
-    }
-    if (deviceitems[devicecounter].traits.includes('action.devices.traits.Modes')) {
-      var modename = deviceitems[devicecounter].attributes.availableModes[0].name
-      var modevalue = deviceitems[devicecounter].attributes.availableModes[0].settings[0].setting_name
-      firebaseRef.child(deviceitems[devicecounter].id).child('Modes').set({currentModeSettings: {modename: modevalue}});
-    }
-    if (deviceitems[devicecounter].traits.includes('action.devices.traits.FanSpeed')) {
-      firebaseRef.child(deviceitems[devicecounter].id).child('FanSpeed').set({currentFanSpeedSetting: 20.0});
-    }
-  }
+  });
+
   return {
     requestId: body.requestId,
     payload: {
       agentUserId: USER_ID,
-      devices: deviceitems
+      devices: deviceitems,
     },
   };
 });
 
-
 const queryFirebase = async (deviceId) => {
-  const snapshot = await firebaseRef.child(deviceId).once('value');
+  const snapshot = await firebaseRef.child(deviceId).once("value");
   const snapshotVal = snapshot.val();
 
-  var asyncvalue = {};
+  // var asyncvalue = {};
 
-  if (Object.prototype.hasOwnProperty.call(snapshotVal, 'OnOff')) {
-    asyncvalue = Object.assign(asyncvalue, {on: snapshotVal.OnOff.on});
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshotVal, 'Brightness')) {
-    asyncvalue = Object.assign(asyncvalue, {brightness: snapshotVal.Brightness.brightness});
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshotVal, 'ColorSetting')) {
-    asyncvalue = Object.assign(asyncvalue, {color: snapshotVal.ColorSetting.color});
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshotVal, 'FanSpeed')) {
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.FanSpeed, 'currentFanSpeedSetting')) {
-      asyncvalue = Object.assign(asyncvalue, {currentFanSpeedSetting: snapshotVal.FanSpeed.currentFanSpeedSetting});
-    }
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshotVal, 'Modes')) {
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.Modes, 'currentModeSettings')) {
-      asyncvalue = Object.assign(asyncvalue, {currentModeSettings: snapshotVal.Modes.currentModeSettings});
-    }
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshotVal, 'TemperatureSetting')) {
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.TemperatureSetting, 'thermostatMode')) {
-      asyncvalue = Object.assign(asyncvalue, {thermostatMode: snapshotVal.TemperatureSetting.thermostatMode});
-    }
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.TemperatureSetting, 'thermostatTemperatureSetpoint')) {
-      asyncvalue = Object.assign(asyncvalue, {thermostatTemperatureSetpoint: snapshotVal.TemperatureSetting.thermostatTemperatureSetpoint});
-    }
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.TemperatureSetting, 'thermostatTemperatureAmbient')) {
-      asyncvalue = Object.assign(asyncvalue, {thermostatTemperatureAmbient: snapshotVal.TemperatureSetting.thermostatTemperatureAmbient});
-    }
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.TemperatureSetting, 'thermostatHumidityAmbient')) {
-      asyncvalue = Object.assign(asyncvalue, {thermostatHumidityAmbient: snapshotVal.TemperatureSetting.thermostatHumidityAmbient});
-    }
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.TemperatureSetting, 'thermostatTemperatureSetpointLow')) {
-      asyncvalue = Object.assign(asyncvalue, {thermostatTemperatureSetpointLow: snapshotVal.TemperatureSetting.thermostatTemperatureSetpointLow});
-    }
-    if (Object.prototype.hasOwnProperty.call(snapshotVal.TemperatureSetting, 'thermostatTemperatureSetpointHigh')) {
-      asyncvalue = Object.assign(asyncvalue, {thermostatTemperatureSetpointHigh: snapshotVal.TemperatureSetting.thermostatTemperatureSetpointHigh});
-    }
-  }
-  return asyncvalue;
-};
+  const deviceValues = Object.entries(snapshotVal).reduce((prev, [, value]) => {
+    return {
+      ...prev,
+      ...value,
+    };
+  }, {});
 
-const queryDevice = async (deviceId) => {
-  const data = await queryFirebase(deviceId);
-
-  var datavalue = {};
-
-  if (Object.prototype.hasOwnProperty.call(data, 'on')) {
-    datavalue = Object.assign(datavalue, {on: data.on});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'brightness')) {
-    datavalue = Object.assign(datavalue, {brightness: data.brightness});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'color')) {
-    datavalue = Object.assign(datavalue, {color: data.color});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'currentFanSpeedSetting')) {
-    datavalue = Object.assign(datavalue, {currentFanSpeedSetting: data.currentFanSpeedSetting});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'currentModeSettings')) {
-    datavalue = Object.assign(datavalue, {currentModeSettings: data.currentModeSettings});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'thermostatMode')) {
-    datavalue = Object.assign(datavalue, {thermostatMode: data.thermostatMode});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'thermostatTemperatureSetpoint')) {
-    datavalue = Object.assign(datavalue, {thermostatTemperatureSetpoint: data.thermostatTemperatureSetpoint});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'thermostatTemperatureAmbient')) {
-    datavalue = Object.assign(datavalue, {thermostatTemperatureAmbient: data.thermostatTemperatureAmbient});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'thermostatHumidityAmbient')) {
-    datavalue = Object.assign(datavalue, {thermostatHumidityAmbient: data.thermostatHumidityAmbient});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'thermostatTemperatureSetpointLow')) {
-    datavalue = Object.assign(datavalue, {thermostatTemperatureSetpointLow: data.thermostatTemperatureSetpointLow});
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'thermostatTemperatureSetpointHigh')) {
-    datavalue = Object.assign(datavalue, {thermostatTemperatureSetpointHigh: data.thermostatTemperatureSetpointHigh});
-  }
-  return datavalue;
+  return deviceValues;
 };
 
 app.onQuery(async (body) => {
-  const {requestId} = body;
+  const { requestId } = body;
+
   const payload = {
     devices: {},
   };
+  functions.logger.log("Esto es una prueba onQuery");
 
   const queryPromises = [];
   const intent = body.inputs[0];
   for (const device of intent.payload.devices) {
     const deviceId = device.id;
     queryPromises.push(
-        queryDevice(deviceId)
-            .then((data) => {
-              // Add response to device payload
-              payload.devices[deviceId] = data;
-            }) );
+      (async () => {
+        const data = await queryFirebase(deviceId);
+        payload.devices[deviceId] = data;
+      })()
+    );
   }
   // Wait for all promises to resolve
+
   await Promise.all(queryPromises);
+  // functions.logger.log("Esto es una prueba onQuery 2", payload);
+
   return {
     requestId: requestId,
     payload: payload,
@@ -265,51 +254,25 @@ app.onQuery(async (body) => {
 });
 
 const updateDevice = async (execution, deviceId) => {
-  const {params, command} = execution;
-  let state, let ref;
-  switch (command) {
-    case 'action.devices.commands.OnOff':
-      state = {on: params.on};
-      ref = firebaseRef.child(deviceId).child('OnOff');
-      break;
-    case 'action.devices.commands.BrightnessAbsolute':
-      state = {brightness: params.brightness};
-      ref = firebaseRef.child(deviceId).child('Brightness');
-      break;
-    case 'action.devices.commands.ColorAbsolute':
-      state = {color: params.color};
-      ref = firebaseRef.child(deviceId).child('ColorSetting');
-      break;
-    case 'action.devices.commands.SetFanSpeed':
-      state = {currentFanSpeedSetting: params.fanSpeed};
-      ref = firebaseRef.child(deviceId).child('FanSpeed');
-      break;
-    case 'action.devices.commands.SetModes':
-      state = {currentModeSettings: params.updateModeSettings};
-      ref = firebaseRef.child(deviceId).child('Modes');
-      break;
-    case 'action.devices.commands.ThermostatTemperatureSetpoint':
-      state = {thermostatTemperatureSetpoint: params.thermostatTemperatureSetpoint};
-      ref = firebaseRef.child(deviceId).child('TemperatureSetting');
-      break;
-    case 'action.devices.commands.ThermostatSetMode':
-      state = {thermostatMode: params.thermostatMode};
-      ref = firebaseRef.child(deviceId).child('TemperatureSetting');
-      break;
-    case 'action.devices.commands.ThermostatTemperatureSetRange':
-      state = {thermostatTemperatureSetpointLow: params.thermostatTemperatureSetpointLow,thermostatTemperatureSetpointHigh: params.thermostatTemperatureSetpointHigh};
-      ref = firebaseRef.child(deviceId).child('TemperatureSetting');
-  }
-  return ref.update(state)
-      .then(() => state);
+  const { params, command } = execution;
+  let state = params;
+
+  const commandName = command.split("action.devices.commands.")[1];
+
+  const ref = firebaseRef
+    .child(deviceId)
+    .child(commands[commandName].traitName);
+
+  return ref.update(state).then(() => state); // state = {[stateKey]: value} => {on: true}
 };
 
 app.onExecute(async (body) => {
-  const {requestId} = body;
+  const { requestId } = body;
   // Execution results are grouped by status
+  functions.logger.log("Esto es una prueba onExecute");
   const result = {
     ids: [],
-    status: 'SUCCESS',
+    status: "SUCCESS",
     states: {
       online: true,
     },
@@ -321,12 +284,13 @@ app.onExecute(async (body) => {
     for (const device of command.devices) {
       for (const execution of command.execution) {
         executePromises.push(
-            updateDevice(execution, device.id)
-                .then((data) => {
-                  result.ids.push(device.id);
-                  Object.assign(result.states, data);
-                })
-                .catch(() => functions.logger.error('EXECUTE', device.id)));
+          updateDevice(execution, device.id)
+            .then((data) => {
+              result.ids.push(device.id);
+              Object.assign(result.states, data);
+            })
+            .catch(() => functions.logger.error("EXECUTE", device.id))
+        );
       }
     }
   }
@@ -341,7 +305,7 @@ app.onExecute(async (body) => {
 });
 
 app.onDisconnect((body, headers) => {
-  functions.logger.log('User account unlinked from Google Assistant');
+  // functions.logger.log("User account unlinked from Google Assistant");
   // Return empty response
   return {};
 });
@@ -349,11 +313,15 @@ app.onDisconnect((body, headers) => {
 exports.smarthome = functions.https.onRequest(app);
 
 exports.requestsync = functions.https.onRequest(async (request, response) => {
-  response.set('Access-Control-Allow-Origin', '*');
-  functions.logger.info('Request SYNC for user ${USER_ID}');
+  response.set("Access-Control-Allow-Origin", "*");
+  functions.logger.info(`Request SYNC for user ${USER_ID}`);
   try {
-    const res = await app.requestSync(USER_ID);
-    functions.logger.log('Request sync completed');
+    const res = await homegraph.devices.requestSync({
+      requestBody: {
+        agentUserId: USER_ID,
+      },
+    });
+    functions.logger.info("Request sync response:", res.status, res.data);
     response.json(res.data);
   } catch (err) {
     functions.logger.error(err);
@@ -361,75 +329,77 @@ exports.requestsync = functions.https.onRequest(async (request, response) => {
   }
 });
 
+exports.helloWorld = functions.https.onRequest((request, response) => {
+  const { text } = request.body;
+  client.subscribe("my/test/topic");
+  client.subscribe("mi_topic");
+
+  // publish message 'Hello' to topic 'my/test/topic'
+  client.publish("my/test/topic", "Hello");
+  client.publish("mi_topic", `Hola desde el server ${text}`);
+
+  response.status(200).send("ok");
+});
+
+exports.updateDeviceState = functions.https.onRequest(
+  async (request, response) => {
+    const { command, state, deviceId } = request.body;
+
+    const resFirebase = await updateDevice(
+      {
+        command,
+        params: state,
+      },
+      deviceId
+    );
+
+    functions.logger.info("Se actualiza Firebase");
+
+    response.status(200).send(resFirebase);
+  }
+);
+
 /**
  * Send a REPORT STATE call to the homegraph when data for any device id
  * has been changed.
  */
-exports.reportstate = functions.database.ref('{deviceId}').onWrite(async (change, context) => {
-  functions.logger.info('Firebase write event triggered this cloud function');
-  if (!app.jwt) {
-    functions.logger.warn('Service account key is not configured');
-    functions.logger.warn('Report state is unavailable');
-    return;
-  }
-  const snapshot = change.after.val();
+exports.reportstate = functions.database
+  .ref("{deviceId}")
+  .onUpdate(async (change, context) => {
+    const snapshot = change.after.val();
 
-  var syncvalue = {};
+    const deviceStatus = Object.values(snapshot).reduce(
+      (accum, curr) => ({ ...accum, ...curr }),
+      {}
+    );
 
-  if (Object.prototype.hasOwnProperty.call(snapshot, 'OnOff')) {
-    syncvalue = Object.assign(syncvalue, {on: snapshot.OnOff.on});
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshot, 'Brightness')) {
-    syncvalue = Object.assign(syncvalue, {brightness: snapshot.Brightness.brightness});
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshot, 'ColorSetting')) {
-    syncvalue = Object.assign(syncvalue, {color: snapshot.ColorSetting.color});
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshot, 'FanSpeed')) {
-    if (Object.prototype.hasOwnProperty.call(snapshot.FanSpeed, 'currentFanSpeedSetting')) {
-      syncvalue = Object.assign(syncvalue, {currentFanSpeedSetting: snapshot.FanSpeed.currentFanSpeedSetting});
-    }
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshot, 'Modes')) {
-    if (Object.prototype.hasOwnProperty.call(snapshot.Modes, 'currentModeSettings')) {
-      syncvalue = Object.assign(syncvalue, {currentModeSettings: snapshot.Modes.currentModeSettings});
-    }
-  }
-  if (Object.prototype.hasOwnProperty.call(snapshot, 'TemperatureSetting')) {
-    if (Object.prototype.hasOwnProperty.call(snapshot.TemperatureSetting, 'thermostatMode')) {
-      syncvalue = Object.assign(syncvalue, {thermostatMode: snapshot.TemperatureSetting.thermostatMode});
-    }
-    if ("thermostatTemperatureSetpoint" in snapshot) {
-      syncvalue = Object.assign(syncvalue, {thermostatTemperatureSetpoint: snapshot.TemperatureSetting.thermostatTemperatureSetpoint});
-    }
-    if ("thermostatTemperatureAmbient" in snapshot) {
-      syncvalue = Object.assign(syncvalue, {thermostatTemperatureAmbient: snapshot.TemperatureSetting.thermostatTemperatureAmbient});
-    }
-    if ('thermostatHumidityAmbient' in snapshot) {
-      syncvalue = Object.assign(syncvalue, {thermostatHumidityAmbient: snapshot.TemperatureSetting.thermostatHumidityAmbient});
-    }
-    if ('thermostatTemperatureSetpointLow' in snapshot) {
-      syncvalue = Object.assign(syncvalue, {thermostatTemperatureSetpointLow: snapshot.TemperatureSetting.thermostatTemperatureSetpointLow});
-    }
-    if ('thermostatTemperatureSetpointHigh' in snapshot) {
-      syncvalue = Object.assign(syncvalue, {thermostatTemperatureSetpointHigh: snapshot.TemperatureSetting.thermostatTemperatureSetpointHigh});
-    }
-  }
-
-  const postData = {
-    requestId: 'ff36a3ccsiddhy', /* Any unique ID */
-    agentUserId: USER_ID, /* Hardcoded user ID */
-    payload: {
-      devices: {
-        states: {
-          /* Report the current state of our light */
-          [context.params.deviceId]: syncvalue,
+    const requestBody = {
+      requestId: "ff36a3cc" /* Any unique ID */,
+      // requestId: "ff36a3ccsiddhy" /* Any unique ID */,
+      agentUserId: USER_ID /* Hardcoded user ID */,
+      payload: {
+        devices: {
+          states: {
+            /* Report the current state of our light */
+            [context.params.deviceId]: deviceStatus,
+          },
         },
       },
-    },
-  };
+    };
 
-  const data = await app.reportState(postData);
-  functions.logger.log('Report state came back');
-  functions.logger.info(data);
-});
+    functions.logger.info("ENTRA A REPORTSTATE", {
+      requestBody,
+      deviceId: context.params.deviceId,
+    });
+
+    const res = await homegraph.devices.reportStateAndNotification({
+      requestBody,
+    });
+
+    client.publish(
+      "mi_topic",
+      JSON.stringify({ [context.params.deviceId]: deviceStatus })
+    );
+
+    functions.logger.info("Report state response:", res.status, res.data);
+  });

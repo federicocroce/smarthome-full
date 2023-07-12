@@ -1,6 +1,6 @@
 ﻿[
   {
-    "id": "1",
+    "id": "led1",
     "type": "action.devices.types.LIGHT",
     "traits": [
       "action.devices.traits.OnOff",
@@ -8,13 +8,9 @@
       "action.devices.traits.ColorSetting"
     ],
     "name": {
-      "defaultNames": [
-        "My Test Light1"
-      ],
-      "name": "Light 1",
-      "nicknames": [
-        "Patio Light"
-      ]
+      "defaultNames": ["My Test Light1"],
+      "name": "led1",
+      "nicknames": ["led1"]
     },
     "deviceInfo": {
       "manufacturer": "Siddhy Co",
@@ -35,20 +31,16 @@
     }
   },
   {
-    "id": "2",
+    "id": "led2",
     "type": "action.devices.types.LIGHT",
     "traits": [
       "action.devices.traits.OnOff",
       "action.devices.traits.Brightness"
     ],
     "name": {
-      "defaultNames": [
-        "My Test Light2"
-      ],
-      "name": "Light 2",
-      "nicknames": [
-        "Corridor Light"
-      ]
+      "defaultNames": ["My Test Light2"],
+      "name": "led2",
+      "nicknames": ["led2"]
     },
     "deviceInfo": {
       "manufacturer": "Siddhy Co",
@@ -63,20 +55,13 @@
     }
   },
   {
-    "id": "3",
+    "id": "ventilador",
     "type": "action.devices.types.FAN",
-    "traits": [
-      "action.devices.traits.FanSpeed",
-      "action.devices.traits.OnOff"
-    ],
+    "traits": ["action.devices.traits.FanSpeed", "action.devices.traits.OnOff"],
     "name": {
-      "defaultNames": [
-        "My Fan"
-      ],
+      "defaultNames": ["My Fan"],
       "name": "Fan1",
-      "nicknames": [
-        "Ceiling Fan"
-      ]
+      "nicknames": ["Ceiling Fan"]
     },
     "deviceInfo": {
       "manufacturer": "Siddhy Co",
@@ -90,27 +75,34 @@
       "commandOnlyFanSpeed": false,
       "availableFanSpeeds": {
         "speeds": [
-          {"speed_name": "Low", "speed_values": [{"speed_synonym": ["low", "low speed", "slow"], "lang": "en"}]},
-          {"speed_name": "Medium", "speed_values": [{"speed_synonym": ["medium", "medium speed", "med"], "lang": "en"}]}
+          {
+            "speed_name": "Low",
+            "speed_values": [
+              { "speed_synonym": ["low", "low speed", "slow"], "lang": "en" }
+            ]
+          },
+          {
+            "speed_name": "Medium",
+            "speed_values": [
+              {
+                "speed_synonym": ["medium", "medium speed", "med"],
+                "lang": "en"
+              }
+            ]
+          }
         ],
         "ordered": true
       }
     }
   },
   {
-    "id": "4",
+    "id": "temperatureController ",
     "type": "action.devices.types.THERMOSTAT",
-    "traits": [
-      "action.devices.traits.TemperatureSetting"
-    ],
+    "traits": ["action.devices.traits.TemperatureSetting"],
     "name": {
-      "defaultNames": [
-        "Temp Control"
-      ],
+      "defaultNames": ["Temp Control"],
       "name": "Temperature Controller ",
-      "nicknames": [
-        "Thermal Controller"
-      ]
+      "nicknames": ["Thermal Controller"]
     },
     "deviceInfo": {
       "manufacturer": "Siddhy Co",
@@ -127,19 +119,13 @@
     }
   },
   {
-    "id": "5",
+    "id": "roomTemperatureSensor",
     "type": "action.devices.types.THERMOSTAT",
-    "traits": [
-      "action.devices.traits.TemperatureSetting"
-    ],
+    "traits": ["action.devices.traits.TemperatureSetting"],
     "name": {
-      "defaultNames": [
-        "Temp Sensor"
-      ],
+      "defaultNames": ["Temp Sensor"],
       "name": "Room Temperature Sensor",
-      "nicknames": [
-        "Ambient Temperature Sensor"
-      ]
+      "nicknames": ["Ambient Temperature Sensor"]
     },
     "deviceInfo": {
       "manufacturer": "Siddhy Co",
@@ -154,19 +140,13 @@
     }
   },
   {
-    "id": "6",
+    "id": "switch",
     "type": "action.devices.types.SWITCH",
-    "traits": [
-      "action.devices.traits.OnOff"
-    ],
+    "traits": ["action.devices.traits.OnOff"],
     "name": {
-      "defaultNames": [
-        "Plug Socket"
-      ],
+      "defaultNames": ["Plug Socket"],
       "name": "Smart Switch",
-      "nicknames": [
-        "New Switch"
-      ]
+      "nicknames": ["New Switch"]
     },
     "deviceInfo": {
       "manufacturer": "Siddhy Co",
@@ -180,7 +160,7 @@
     }
   },
   {
-    "id": "7",
+    "id": "luz3",
     "type": "action.devices.types.LIGHT",
     "traits": [
       "action.devices.traits.OnOff",
@@ -189,13 +169,9 @@
       "action.devices.traits.Modes"
     ],
     "name": {
-      "defaultNames": [
-        "My Test Light3"
-      ],
+      "defaultNames": ["My Test Light3"],
       "name": "Light 3",
-      "nicknames": [
-        "Mood light"
-      ]
+      "nicknames": ["Mood light"]
     },
     "deviceInfo": {
       "manufacturer": "Siddhy Co",
@@ -205,27 +181,62 @@
     },
     "willReportState": true,
     "attributes": {
-      "availableModes": [{
-        "name": "Mood",
-        "name_values": [{"name_synonym": ["mood", "feeling"], "lang": "en" }],
-        "settings": [
-          {"setting_name": "Blank", "setting_values": [{"setting_synonym": ["null", "nothing"], "lang": "en"}]
-          },
-          {"setting_name": "Happy", "setting_values": [{"setting_synonym": ["happy", "cheerful"], "lang": "en"}]
-          },
-          {"setting_name": "Sad", "setting_values": [{"setting_synonym": ["sad", "unhappy"], "lang": "en"}]
-          },
-          {"setting_name": "Angry", "setting_values": [{"setting_synonym": ["angry", "annoyed"], "lang": "en"}]
-          },
-          {"setting_name": "Party", "setting_values": [{"setting_synonym": ["party", "dance"], "lang": "en"}]
-          },
-          {"setting_name": "Anxious", "setting_values": [{"setting_synonym": ["anxious mood", "anxiety"], "lang": "en"}]
-          },
-          {"setting_name": "Busy", "setting_values": [{"setting_synonym": ["busy mood", "busy", "at work"], "lang": "en"}]
-          }
-        ],
-        "ordered": true
-        }],
+      "availableModes": [
+        {
+          "name": "Mood",
+          "name_values": [
+            { "name_synonym": ["mood", "feeling"], "lang": "en" }
+          ],
+          "settings": [
+            {
+              "setting_name": "Blank",
+              "setting_values": [
+                { "setting_synonym": ["null", "nothing"], "lang": "en" }
+              ]
+            },
+            {
+              "setting_name": "Happy",
+              "setting_values": [
+                { "setting_synonym": ["happy", "cheerful"], "lang": "en" }
+              ]
+            },
+            {
+              "setting_name": "Sad",
+              "setting_values": [
+                { "setting_synonym": ["sad", "unhappy"], "lang": "en" }
+              ]
+            },
+            {
+              "setting_name": "Angry",
+              "setting_values": [
+                { "setting_synonym": ["angry", "annoyed"], "lang": "en" }
+              ]
+            },
+            {
+              "setting_name": "Party",
+              "setting_values": [
+                { "setting_synonym": ["party", "dance"], "lang": "en" }
+              ]
+            },
+            {
+              "setting_name": "Anxious",
+              "setting_values": [
+                { "setting_synonym": ["anxious mood", "anxiety"], "lang": "en" }
+              ]
+            },
+            {
+              "setting_name": "Busy",
+              "setting_values": [
+                {
+                  "setting_synonym": ["busy mood", "busy", "at work"],
+                  "lang": "en"
+                }
+              ]
+            }
+          ],
+          "ordered": true
+        }
+      ],
       "commandOnlyOnOff": false,
       "commandOnlyBrightness": false,
       "commandOnlyModes": false,
