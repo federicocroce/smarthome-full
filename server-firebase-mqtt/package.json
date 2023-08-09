@@ -1,0 +1,30 @@
+{
+  "name": "smarthome-control",
+  "main": "index.js",
+  "description": "Codes for controlling devices through the Google Assistant By Sid",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "deploy": "firebase deploy --only functions",
+    "serve": "pm2 start ecosystem.config.js",
+    "serve:stop": "pm2 stop ecosystem.config.js",
+    "serve:delete": "pm2 stop ecosystem.config.js",
+    "shell": "firebase functions:shell",
+    "start": "nodemon index.js",
+    "lint": "eslint \"**/*.js\"",
+    "lint:fix": "eslint --fix \"**/*.js\""
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "firebase": "^10.1.0",
+    "mqtt": "^4.3.7"
+  },
+  "private": true,
+  "devDependencies": {
+    "eslint": "^8.44.0",
+    "firebase-functions-test": "^2.1.0"
+  }
+}
