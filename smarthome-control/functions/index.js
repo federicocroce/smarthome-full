@@ -23,31 +23,82 @@ const { google } = require("googleapis");
 const util = require("util");
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
-const mqtt = require("mqtt");
+const { clientMqtt, mqttTopics } = require("./mqtt");
 
-var options = {
-  host: "afdc512217a942639f02c4cf4cce5fd0.s1.eu.hivemq.cloud",
-  port: 8883,
-  protocol: "mqtts",
-  username: "fcroce",
-  password: "34023936Fc",
+// const mqttTopics = {
+//   mi_topic: "mi_topic",
+//   mi_topic_response: "mi_topic_response",
+// };
+console.log(`COMIENZA LA APP`);
+
+// const mqtt = require("mqtt");
+
+// var options = {
+//   host: "afdc512217a942639f02c4cf4cce5fd0.s1.eu.hivemq.cloud",
+//   port: 8883,
+//   protocol: "mqtts",
+//   username: "fcroce",
+//   password: "34023936Fc",
+// };
+
+// // initialize the MQTT client
+// var clientMqtt = mqtt.connect(options);
+
+// // setup the callbacks
+// clientMqtt.on("connect", function () {
+//   console.log("Connected");
+// });
+
+// clientMqtt.on("error", function (error) {
+//   console.log(error);
+// });
+
+// clientMqtt.on("message", function (topic, message) {
+//   // called each time a message is received
+//   functions.logger.log("Received message:", topic, message.toString());
+//   console.log("Received message:", topic, message.toString());
+// });
+
+// clientMqtt.subscribe("mi_topic");
+
+///////////////////////////////////////////////////////////////////
+//
+
+///////////////////////////////////////////////////
+const actionsTopics = {
+  [mqttTopics.update_device]: ({ topic, message }) => {
+    clientMqtt.publish(
+      mqttTopics.update_device_response,
+      `soy la response desde actions_topics DESDE LOCAL: ${message.toString()}`
+    );
+  },
 };
 
-// initialize the MQTT client
-var client = mqtt.connect(options);
+setTimeout(() => {
+  console.log("Sus");
+  clientMqtt.subscribe(mqttTopics.update_device_response);
+}, 1000);
 
-// setup the callbacks
-client.on("connect", function () {
-  console.log("Connected");
+clientMqtt.onResponseTopics(({ topic, message }) => {
+  functions.logger.log(`onResponseTopics`, topic);
+
+  // clientMqtt.subscribe("update_device");
+  if (topic in actionsTopics) {
+    actionsTopics[topic]({ topic, message });
+  }
 });
 
-client.on("error", function (error) {
-  console.log(error);
-});
+/////////
 
-client.on("message", function (topic, message) {
-  // called each time a message is received
-  console.log("Received message:", topic, message.toString());
+exports.helloWorld = functions.https.onRequest((request, response) => {
+  const { text } = request.body;
+
+  functions.logger.log(`helloWorld`);
+  // publish message 'Hello' to topic 'my/test/topic'
+  // client.publish("my/test/topic", "Hello");
+  clientMqtt.publish("update_device", `Actualizo el disponsitivo ${text}`);
+
+  response.status(200).send("ok Fede");
 });
 
 // Initialize Firebase
@@ -329,17 +380,111 @@ exports.requestsync = functions.https.onRequest(async (request, response) => {
   }
 });
 
-exports.helloWorld = functions.https.onRequest((request, response) => {
-  const { text } = request.body;
-  client.subscribe("my/test/topic");
-  client.subscribe("mi_topic");
+// exports.getDevicesState = functions.https.onRequest(
+//   async (request, response) => {
+//     const { command, devicesId } = request.body;
 
-  // publish message 'Hello' to topic 'my/test/topic'
-  client.publish("my/test/topic", "Hello");
-  client.publish("mi_topic", `Hola desde el server ${text}`);
+//     const requestBody = {
+//       requestId: "ff36a3cc" /* Any unique ID */,
+//       // requestId: "ff36a3ccsiddhy" /* Any unique ID */,
+//       agentUserId: USER_ID /* Hardcoded user ID */,
+//       payload: {
+//         devices: [
+//           {
+//             id: "led1",
+//           },
+//         ],
+//       },
+//     };
 
-  response.status(200).send("ok");
-});
+//     functions.logger.info("ENTRA A getDevicesState", {
+//       requestBody,
+//       deviceId: context.params.deviceId,
+//     });
+
+//     const res = await homegraph.devices.query({
+//       requestBody,
+//     });
+
+//     functions.logger.info("query state response:", res.status, res.data);
+
+//   }
+// );
+
+exports.getDevicesState = functions.https.onRequest(
+  async (request, response) => {
+    const { devices } = request.body;
+
+    functions.logger.info("ENTRA A getDevicesState", {
+      devices,
+    });
+    try {
+      const queryPromises = [];
+      for (const deviceId of devices) {
+        queryPromises.push(
+          homegraph.devices.query({
+            requestBody: {
+              agentUserId: USER_ID, // Reemplaza con el ID del usuario agente (usuario de Google)
+              inputs: [
+                {
+                  payload: {
+                    devices: [
+                      {
+                        id: deviceId, // Reemplaza con el ID del dispositivo que quieres consultar
+                      },
+                      // Puedes agregar más dispositivos si es necesario
+                    ],
+                  },
+                },
+              ],
+            },
+          })
+        );
+      }
+      functions.logger.info(
+        "QUERY state response queryPromises:",
+        queryPromises
+      );
+      queryPromises;
+      // Wait for all promises to resolve
+      const res = await Promise.all(queryPromises);
+
+      clientMqtt.subscribe("get_devices_state");
+
+      // await homegraph.devices.query({
+      //   requestBody: {
+      //     agentUserId: USER_ID, // Reemplaza con el ID del usuario agente (usuario de Google)
+      //     inputs: [
+      //       {
+      //         payload: {
+      //           devices: [
+      //             {
+      //               id: "led1", // Reemplaza con el ID del dispositivo que quieres consultar
+      //             },
+      //             // Puedes agregar más dispositivos si es necesario
+      //           ],
+      //         },
+      //       },
+      //     ],
+      //   },
+      // });
+      functions.logger.info("QUERY state response:", res);
+      // Manejar la respuesta de la API
+      // console.log(response.data);
+      response.status(200).send("ok");
+    } catch (error) {
+      // Manejar errores
+      functions.logger.info(
+        "Error al realizar la consulta a HomeGraph:",
+        error.message
+      );
+    }
+
+    // const res = await homegraph.devices.query(requestBody);
+
+    // functions.logger.info("query state response:", res.status, res.data);
+  }
+);
 
 exports.updateDeviceState = functions.https.onRequest(
   async (request, response) => {
@@ -366,7 +511,16 @@ exports.updateDeviceState = functions.https.onRequest(
 exports.reportstate = functions.database
   .ref("{deviceId}")
   .onUpdate(async (change, context) => {
+    functions.logger.info("SOURCE change.after", change.after);
+    functions.logger.info("SOURCE change.before", change.before);
+    functions.logger.info("SOURCE change.after.data", change.after.data);
+    // functions.logger.info("SOURCE change.after.val", change.after.val);
     const snapshot = change.after.val();
+    functions.logger.info("SOURCE reportstate snapshot", snapshot);
+    functions.logger.info("SOURCE reportstate source", snapshot.source);
+
+    const before = change.before.data();
+    functions.logger.info("SOURCE reportstate source", before);
 
     const deviceStatus = Object.values(snapshot).reduce(
       (accum, curr) => ({ ...accum, ...curr }),
@@ -396,10 +550,23 @@ exports.reportstate = functions.database
       requestBody,
     });
 
-    client.publish(
+    clientMqtt.publish(
       "mi_topic",
       JSON.stringify({ [context.params.deviceId]: deviceStatus })
     );
 
     functions.logger.info("Report state response:", res.status, res.data);
   });
+
+// exports.ping = functions.https.onRequest((request, response) => {
+//   app.onExecute()
+//   // const { text } = request.body;
+//   // client.subscribe("ping/onExecute");
+//   // client.subscribe("mi_topic");
+
+//   // // publish message 'Hello' to topic 'my/test/topic'
+//   // client.publish("my/test/topic", "Hello");
+//   // client.publish("mi_topic", `Hola desde el server ${text}`);
+
+//   response.status(200).send("ok");
+// });

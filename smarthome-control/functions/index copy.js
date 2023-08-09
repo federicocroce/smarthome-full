@@ -16,7 +16,7 @@
 
 "use strict";
 
-require("firebase-functions/logger/compat");
+// require("firebase-functions/logger/compat");
 const functions = require("firebase-functions");
 const { smarthome } = require("actions-on-google");
 const { google } = require("googleapis");

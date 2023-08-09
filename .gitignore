@@ -1,4 +1,5 @@
 **/functions/node_modules
+**/server-firebase-mqtt/node_modules
 **/functions/package-lock.json
 **/firebase-debug.log
 **/.firebaserc

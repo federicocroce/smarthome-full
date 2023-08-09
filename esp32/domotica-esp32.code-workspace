@@ -1,0 +1,20 @@
+{
+  "folders": [
+    {
+      "name": "domotica-esp32",
+      "path": "."
+    },
+    {
+      "name": "serial://dev/tty.usbserial-0001",
+      "uri": "serial://%2fdev%2ftty.usbserial-0001/"
+    },
+    {
+      "name": "serial://dev/tty.SLAB_USBtoUART",
+      "uri": "serial://%2fdev%2ftty.slab_usbtouart/"
+    },
+    {
+      "name": "SASARASA",
+      "path": "../SASARASA"
+    }
+  ]
+}
