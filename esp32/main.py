@@ -14,8 +14,8 @@ from Delay import delay_seconds
 from DeviceConfig import set_device, init_device, get_device_config
 from Touch import Touch
 import _thread
-import Ufirebase as firebase
-import urequests
+# import Ufirebase as firebase
+# import urequests
 
 
 LED_STATUS = Pin(2, Pin.OUT)
@@ -56,7 +56,7 @@ client_id = "esp32_client"
 #         LED_MQTT.off()
 #         return False
 
-firebase.setURL("https://smart-home-fc-76670-default-rtdb.firebaseio.com/")
+# firebase.setURL("https://smart-home-fc-76670-default-rtdb.firebaseio.com/")
 # firebase.patch("led1", {"Brightness": {"brightness": 1}}, bg=False, id=1, cb=None)
 # print("Setea el brillo")
 
@@ -92,9 +92,9 @@ def callback(topic, msg):
 (handle_wifi_disconnect, is_wifi_connected) = wifi_init(
     WIFI_SSID, WIFI_PASSWORD, LED_WIFI)
 
-response = urequests.get('http://23.22.177.181:3000/')
-
-print(response.content)
+# response = urequests.get('http://23.22.177.181:3000/')
+# 
+# print(response.content)
 
 
 init_device()

@@ -68,16 +68,16 @@ def format_led_rgb(pin_red, pin_green, pin_blue, led_name):
         temperature=new_temperature
         color_red, color_green, color_blue = 0, 0, 0
         
-        print('brightness', brightness)
-        print('is_on', is_on)
-        print('spectrumrgb', spectrumrgb)
+#         print('brightness', brightness)
+#         print('is_on', is_on)
+#         print('spectrumrgb', spectrumrgb)
         
         if not spectrumrgb and temperature:
             color_red, color_green, color_blue = configurar_temperatura_color(temperature)
         else:
             color_red, color_green, color_blue = spectrumrgb_to_rgb_limit_100(
                 spectrumrgb, brightness)
-        print('red, green, blue', color_red, color_green, color_blue)
+#         print('red, green, blue', color_red, color_green, color_blue)
         red.set_dimmer(color_red, is_on)
         green.set_dimmer(color_green, is_on)
         blue.set_dimmer(color_blue, is_on)
@@ -92,11 +92,9 @@ def format_led_rgb(pin_red, pin_green, pin_blue, led_name):
 #         mqtt_client.publish('update_device', {"Brightness": {"brightness": brightness}})
         
         def callback():
-    #         firebase.get("led1", "led1", bg=False, id=1, cb=None, limit=False)
-    #         firebase.patch("led1", {"Brightness": {"brightness": 10}})
-    #         firebase.patch(led_name, {"Brightness": {"brightness": brightness}})
+
             update_device(led_name, {"Brightness": {"brightness": brightness}})
-#             mqtt_client.publish('update_device', 'UPDATE')
+            # mqtt_client.publish('update_device', 'UPDATE')
             print("Envío al servidor", led_name, brightness )
 
         is_touching_increase = touch_increase.is_touching(callback)

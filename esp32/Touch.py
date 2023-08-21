@@ -25,13 +25,14 @@ class Touch:
         self.callback_timer = False
         self.flag_touch = False
         
-    def is_touching(self, callback, time_threshold = 3):
+    def is_touching(self, callback, time_threshold = 0.5):
         touch_pin = self.touch_pin
         value = False
         try: #Try getting Touch state
             if touch_pin.read() < 400:
                 value = True
         except: #If error, return True
+            value = True
             return True
         
         if callback is not None:
@@ -41,8 +42,8 @@ class Touch:
             elif value == False and self.flag_touch == True:
                 print("Not Touching")
                 self.flag_touch = False
-                callback()
-#                 delay_seconds(callback, time_threshold)
+#                 callback()
+                delay_seconds(callback, time_threshold)
 
             
             

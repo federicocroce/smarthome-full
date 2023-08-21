@@ -511,16 +511,16 @@ exports.updateDeviceState = functions.https.onRequest(
 exports.reportstate = functions.database
   .ref("{deviceId}")
   .onUpdate(async (change, context) => {
-    functions.logger.info("SOURCE change.after", change.after);
-    functions.logger.info("SOURCE change.before", change.before);
-    functions.logger.info("SOURCE change.after.data", change.after.data);
+    // functions.logger.info("SOURCE change.after", change.after);
+    // functions.logger.info("SOURCE change.before", change.before);
+    // functions.logger.info("SOURCE change.after.data", change.after.data);
     // functions.logger.info("SOURCE change.after.val", change.after.val);
     const snapshot = change.after.val();
-    functions.logger.info("SOURCE reportstate snapshot", snapshot);
-    functions.logger.info("SOURCE reportstate source", snapshot.source);
+    // functions.logger.info("SOURCE reportstate snapshot", snapshot);
+    // functions.logger.info("SOURCE reportstate source", snapshot.source);
 
-    const before = change.before.data();
-    functions.logger.info("SOURCE reportstate source", before);
+    // const before = change.before.data();
+    // functions.logger.info("SOURCE reportstate source", before);
 
     const deviceStatus = Object.values(snapshot).reduce(
       (accum, curr) => ({ ...accum, ...curr }),

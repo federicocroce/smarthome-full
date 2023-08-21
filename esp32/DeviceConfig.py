@@ -13,9 +13,9 @@ def config_led_rgb(led_data, led_device):
         color_name = led_data.get('color', {}).get('name')
         temperature = led_data.get('color', {}).get('temperature')
         is_on = led_data.get('on')
-        print('Brightness:', brightness)
-        print('Color:', spectrumrgb)
-        print('Is On:', is_on)
+#         print('Brightness:', brightness)
+#         print('Color:', spectrumrgb)
+#         print('Is On:', is_on)
         
 #         (red, green, blue) = led_device['led']
         
@@ -68,22 +68,24 @@ def init_device():
 #     firebase.setURL("https://smart-home-fc-76670-default-rtdb.firebaseio.com/")
     devices_id = {"devicesId":[key for key in device_config.keys()]}
     params_json = ujson.dumps(devices_id)
-    response = urequests.post('http://23.22.177.181:3000/getDevicesValue', headers = {'content-type': 'application/json'}, data=params_json)
-    res = ujson.loads(response.content)
-    print("res", res)
-    
-    for device_id in res.keys():
-        deviceStatus = {}
-        deviceStatus[device_id] = {}
-        print('init_device 1', deviceStatus)
-#         firebase.get(device_id, device_id, bg=False, id=0, cb=None, limit=False)
-        device_data = res[device_id]
-        print('init_device 2', device_data)
-        for key in device_data.keys():
-            deviceStatus[device_id].update(device_data[key])
-        print(deviceStatus)
-        set_device(deviceStatus)
+    try:
+        response = urequests.post('http://23.22.177.181:3000/getDevicesValue', headers = {'content-type': 'application/json'}, data=params_json)
+        res = ujson.loads(response.content)
+        print("res", res)
         
+        for device_id in res.keys():
+            deviceStatus = {}
+            deviceStatus[device_id] = {}
+            print('init_device 1', deviceStatus)
+    #         firebase.get(device_id, device_id, bg=False, id=0, cb=None, limit=False)
+            device_data = res[device_id]
+            print('init_device 2', device_data)
+            for key in device_data.keys():
+                deviceStatus[device_id].update(device_data[key])
+            print(deviceStatus)
+            set_device(deviceStatus)	
+    except OSError as e:
+        print("OSError", e)
         
 # def init_device():
 #     firebase.setURL("https://smart-home-fc-76670-default-rtdb.firebaseio.com/")
