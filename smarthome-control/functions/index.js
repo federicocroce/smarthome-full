@@ -411,98 +411,98 @@ exports.requestsync = functions.https.onRequest(async (request, response) => {
 //   }
 // );
 
-exports.getDevicesState = functions.https.onRequest(
-  async (request, response) => {
-    const { devices } = request.body;
+// exports.getDevicesState = functions.https.onRequest(
+//   async (request, response) => {
+//     const { devices } = request.body;
 
-    functions.logger.info("ENTRA A getDevicesState", {
-      devices,
-    });
-    try {
-      const queryPromises = [];
-      for (const deviceId of devices) {
-        queryPromises.push(
-          homegraph.devices.query({
-            requestBody: {
-              agentUserId: USER_ID, // Reemplaza con el ID del usuario agente (usuario de Google)
-              inputs: [
-                {
-                  payload: {
-                    devices: [
-                      {
-                        id: deviceId, // Reemplaza con el ID del dispositivo que quieres consultar
-                      },
-                      // Puedes agregar más dispositivos si es necesario
-                    ],
-                  },
-                },
-              ],
-            },
-          })
-        );
-      }
-      functions.logger.info(
-        "QUERY state response queryPromises:",
-        queryPromises
-      );
-      queryPromises;
-      // Wait for all promises to resolve
-      const res = await Promise.all(queryPromises);
+//     functions.logger.info("ENTRA A getDevicesState", {
+//       devices,
+//     });
+//     try {
+//       const queryPromises = [];
+//       for (const deviceId of devices) {
+//         queryPromises.push(
+//           homegraph.devices.query({
+//             requestBody: {
+//               agentUserId: USER_ID, // Reemplaza con el ID del usuario agente (usuario de Google)
+//               inputs: [
+//                 {
+//                   payload: {
+//                     devices: [
+//                       {
+//                         id: deviceId, // Reemplaza con el ID del dispositivo que quieres consultar
+//                       },
+//                       // Puedes agregar más dispositivos si es necesario
+//                     ],
+//                   },
+//                 },
+//               ],
+//             },
+//           })
+//         );
+//       }
+//       functions.logger.info(
+//         "QUERY state response queryPromises:",
+//         queryPromises
+//       );
+//       queryPromises;
+//       // Wait for all promises to resolve
+//       const res = await Promise.all(queryPromises);
 
-      clientMqtt.subscribe("get_devices_state");
+//       clientMqtt.subscribe("get_devices_state");
 
-      // await homegraph.devices.query({
-      //   requestBody: {
-      //     agentUserId: USER_ID, // Reemplaza con el ID del usuario agente (usuario de Google)
-      //     inputs: [
-      //       {
-      //         payload: {
-      //           devices: [
-      //             {
-      //               id: "led1", // Reemplaza con el ID del dispositivo que quieres consultar
-      //             },
-      //             // Puedes agregar más dispositivos si es necesario
-      //           ],
-      //         },
-      //       },
-      //     ],
-      //   },
-      // });
-      functions.logger.info("QUERY state response:", res);
-      // Manejar la respuesta de la API
-      // console.log(response.data);
-      response.status(200).send("ok");
-    } catch (error) {
-      // Manejar errores
-      functions.logger.info(
-        "Error al realizar la consulta a HomeGraph:",
-        error.message
-      );
-    }
+//       // await homegraph.devices.query({
+//       //   requestBody: {
+//       //     agentUserId: USER_ID, // Reemplaza con el ID del usuario agente (usuario de Google)
+//       //     inputs: [
+//       //       {
+//       //         payload: {
+//       //           devices: [
+//       //             {
+//       //               id: "led1", // Reemplaza con el ID del dispositivo que quieres consultar
+//       //             },
+//       //             // Puedes agregar más dispositivos si es necesario
+//       //           ],
+//       //         },
+//       //       },
+//       //     ],
+//       //   },
+//       // });
+//       functions.logger.info("QUERY state response:", res);
+//       // Manejar la respuesta de la API
+//       // console.log(response.data);
+//       response.status(200).send("ok");
+//     } catch (error) {
+//       // Manejar errores
+//       functions.logger.info(
+//         "Error al realizar la consulta a HomeGraph:",
+//         error.message
+//       );
+//     }
 
-    // const res = await homegraph.devices.query(requestBody);
+//     // const res = await homegraph.devices.query(requestBody);
 
-    // functions.logger.info("query state response:", res.status, res.data);
-  }
-);
+//     // functions.logger.info("query state response:", res.status, res.data);
+//   }
+// );
 
-exports.updateDeviceState = functions.https.onRequest(
-  async (request, response) => {
-    const { command, state, deviceId } = request.body;
+// exports.updateDeviceState = functions.https.onRequest(
+//   async (request, response) => {
+//     const { command, state, deviceId } = request.body;
 
-    const resFirebase = await updateDevice(
-      {
-        command,
-        params: state,
-      },
-      deviceId
-    );
+//     const resFirebase = await updateDevice(
+//       {
+//         command,
+//         params: state,
+//       },
+//       deviceId
+//     );
 
-    functions.logger.info("Se actualiza Firebase");
+//     functions.logger.info("Se actualiza Firebase");
 
-    response.status(200).send(resFirebase);
-  }
-);
+//     response.status(200).send(resFirebase);
+//   }
+// );
 
 /**
  * Send a REPORT STATE call to the homegraph when data for any device id
