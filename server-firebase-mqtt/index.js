@@ -73,7 +73,7 @@ const app = express();
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const port = process.env.PORT || 8080; // Puedes cambiar el puerto aquí si lo deseas
+const port = process.env.PORT || 443; // Puedes cambiar el puerto aquí si lo deseas
 
 console.log(`COMIENZA LA APP`);
 
