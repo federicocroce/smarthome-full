@@ -28,6 +28,9 @@ const bodyParser = require("body-parser");
 const { getDatabase, ref, update, child, get } = require("firebase/database");
 const { google } = require("googleapis");
 
+const fs = require("fs");
+const https = require("https");
+
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -73,7 +76,7 @@ const app = express();
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const port = process.env.PORT || 3000; // Puedes cambiar el puerto aquí si lo deseas
+const port = process.env.PORT || 3001; // Puedes cambiar el puerto aquí si lo deseas
 
 console.log(`COMIENZA LA APP`);
 
@@ -443,7 +446,19 @@ onValueUpdated("{deviceId}", (event) => {
 
 // onRequest(app)
 
+https
+  .createServer(
+    {
+      cert: fs.readFileSync("certificate.pem"),
+      key: fs.readFileSync("key.key"),
+    },
+    app
+  )
+  .listen(port, () => {
+    console.log(`Servidor Express escuchando en http://localhost:${port}`);
+  });
+
 // Inicia el servidor en el puerto especificado
-app.listen(port, () => {
-  console.log(`Servidor Express escuchando en http://localhost:${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`Servidor Express escuchando en http://localhost:${port}`);
+// });
