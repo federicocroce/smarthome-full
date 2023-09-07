@@ -201,7 +201,7 @@ app.use((req, res) => {
 
 ///
 
-app.get("/fakeauth", (req, res) => {
+app.post("/fakeauth", (req, res) => {
   const responseurl = util.format(
     "%s?code=%s&state=%s",
     decodeURIComponent(req.query.redirect_uri),
