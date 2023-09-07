@@ -18,15 +18,26 @@
 
 // require("firebase-functions/logger/compat");
 const { smarthome } = require("actions-on-google");
-const { onValueUpdated } = require("firebase-functions/v2/database");
+// const { onValueUpdated } = require("firebase-functions/v2/database");
 
 const express = require("express");
 const { clientMqtt, mqttTopics } = require("./mqtt");
 // Import the functions you need from the SDKs you need
 const { initializeApp } = require("firebase/app");
 const bodyParser = require("body-parser");
-const { getDatabase, ref, update, child, get } = require("firebase/database");
+const {
+  getDatabase,
+  ref,
+  update,
+  child,
+  get,
+  onValue,
+} = require("firebase/database");
 const { google } = require("googleapis");
+
+// const credentials = "./smart-home-key.json"; // Reemplaza con la ruta de tu archivo de credenciales
+
+const credentials = require("./service-account.json");
 
 const fs = require("fs");
 const https = require("https");
@@ -47,9 +58,11 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const firebaseApp = initializeApp(firebaseConfig);
-const dbRef = ref(getDatabase(firebaseApp));
+const db = getDatabase(firebaseApp);
+const dbRef = ref(db);
 
 const auth = new google.auth.GoogleAuth({
+  credentials,
   scopes: "https://www.googleapis.com/auth/homegraph",
 });
 const homegraph = google.homegraph({
@@ -70,6 +83,7 @@ const commands = {
 };
 
 // Hardcoded user ID
+// const USER_ID = "117076068345703080494";
 const USER_ID = "123";
 
 const app = express();
@@ -115,15 +129,19 @@ app.get("/", (req, res) => {
   // const { devicesId } = req.body;
   res.send(`Hello, World!`);
 });
+
+const getAllDevices = async () => {
+  const snapshot = await get(child(dbRef, "/"));
+  return snapshot.val();
+};
+
 app.get("/getAllDevices", async (req, res) => {
   console.log(req.body);
   // const { devicesId } = req.body;
 
-  const snapshot = await get(child(dbRef, "/"));
+  const devicesData = await getAllDevices();
 
-  console.log(snapshot.val());
-
-  res.status(200).send(snapshot.val());
+  res.status(200).send(devicesData);
 });
 
 app.post("/getDevicesValue", async (req, res) => {
@@ -385,10 +403,10 @@ app.post("/requestsync", async (request, response) => {
   }
 });
 
-onValueUpdated("{deviceId}", (event) => {
-  console.log("onValueUpdated", event.data.val());
-  // …
-});
+// onValueUpdated("{deviceId}", (event) => {
+//   console.log("onValueUpdated", event.data.val());
+//   // …
+// });
 
 // exports.reportstate = functions.database
 //   .ref("{deviceId}")
@@ -446,6 +464,93 @@ onValueUpdated("{deviceId}", (event) => {
 
 // onRequest(app)
 
+const initServer = async () => {
+  // console.log("Init server");
+  let firstCall = true;
+  const devicesData = await getAllDevices();
+  const deviceKeys = Object.keys(devicesData);
+  console.log("Init server", deviceKeys);
+
+  for (let index = 0; index < deviceKeys.length; index++) {
+    const key = deviceKeys[index];
+    const deviceRef = ref(db, key);
+    // console.log("init", deviceRef);
+    onValue(deviceRef, async (snapshot) => {
+      if (firstCall) {
+        if (deviceKeys.length === index + 1) firstCall = false;
+        return;
+      }
+      const data = snapshot.val();
+      const deviceId = snapshot.key;
+
+      // console.log(`snapshot ${snapshot.key}`, data);
+
+      const deviceStatus = Object.values(data).reduce(
+        (accum, curr) => ({ ...accum, ...curr }),
+        {}
+      );
+
+      const requestBody = {
+        requestId: "ff36a3cc" /* Any unique ID */,
+        // requestId: "ff36a3ccsiddhy" /* Any unique ID */,
+        agentUserId: USER_ID /* Hardcoded user ID */,
+        payload: {
+          devices: {
+            states: {
+              /* Report the current state of our light */
+              // [deviceId]: { on: true },
+              [deviceId]: deviceStatus,
+
+              // [context.params.deviceId]: deviceStatus,
+            },
+          },
+        },
+      };
+
+      // functions.logger.info("ENTRA A REPORTSTATE", {
+      //   requestBody,
+      //   deviceId,
+      // });
+
+      try {
+        const res = await homegraph.devices.reportStateAndNotification({
+          requestBody,
+        });
+
+        // console.log({ res });
+
+        // const res = await homegraphClient.devices.reportStateAndNotification({
+        //   requestBody: {
+        //     agentUserId: "ff36a3cc",
+        //     requestId: "PLACEHOLDER-REQUEST-ID",
+        //     payload: {
+        //       devices: {
+        //         states: {
+        //           "PLACEHOLDER-DEVICE-ID": {
+        //             on: true,
+        //           },
+        //         },
+        //       },
+        //     },
+        //   },
+        // });
+
+        clientMqtt.publish(
+          "mi_topic_local",
+          JSON.stringify({ [deviceId]: data })
+          // JSON.stringify({ [deviceId]: deviceStatus })
+        );
+      } catch (error) {
+        console.log({ error });
+      }
+
+      // functions.logger.info("Report state response:", res.status, res.data);
+    });
+  }
+};
+
+initServer();
+
 https
   .createServer(
     {
@@ -455,7 +560,7 @@ https
     app
   )
   .listen(port, () => {
-    console.log(`Servidor Express escuchando en http://localhost:${port}`);
+    console.log(`Servidor Express escuchando en https://localhost:${port}`);
   });
 
 // Inicia el servidor en el puerto especificado
