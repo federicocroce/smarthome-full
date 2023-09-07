@@ -172,6 +172,7 @@ app.post("/getDevicesValue", async (req, res) => {
 //
 
 app.get("/login", (req, res) => {
+  console.log("login get");
   res.send(`
   <html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
