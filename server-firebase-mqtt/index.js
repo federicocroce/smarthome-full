@@ -18,6 +18,8 @@
 
 // require("firebase-functions/logger/compat");
 const { smarthome } = require("actions-on-google");
+const util = require("util");
+
 // const { onValueUpdated } = require("firebase-functions/v2/database");
 
 const express = require("express");
@@ -41,6 +43,18 @@ const credentials = require("./service-account.json");
 
 const fs = require("fs");
 const https = require("https");
+
+// Hardcoded user ID
+// const USER_ID = "117076068345703080494";
+const USER_ID = "123";
+
+const app = express();
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const port = process.env.PORT || 8443; // Puedes cambiar el puerto aquí si lo deseas
+
+console.log(`COMIENZA LA APP`);
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -82,18 +96,6 @@ const commands = {
   // ThermostatTemperatureSetRange: "TemperatureSetting",
 };
 
-// Hardcoded user ID
-// const USER_ID = "117076068345703080494";
-const USER_ID = "123";
-
-const app = express();
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-const port = process.env.PORT || 8443; // Puedes cambiar el puerto aquí si lo deseas
-
-console.log(`COMIENZA LA APP`);
-
 const actionsTopics = {
   [mqttTopics.update_device]: ({ topic, message }) => {
     const messageFormatted = JSON.parse(message);
@@ -125,9 +127,9 @@ clientMqtt.onResponseTopics(({ topic, message }) => {
 
 // Ruta principal que muestra "Hello, World!"
 app.get("/", (req, res) => {
-  console.log(req.body);
+  console.log("soy el /", req.body);
   // const { devicesId } = req.body;
-  res.send(`Hello, World!`);
+  res.send(`Hello, World! 1`);
 });
 
 const getAllDevices = async () => {
@@ -195,13 +197,30 @@ app.post("/login", (req, res) => {
   res.redirect(responseurl);
 });
 
-app.use((req, res) => {
-  res.status(405).send("Method Not Allowed");
-});
+// app.use((req, res) => {
+//   res.status(405).send("Method Not Allowed");
+// });
 
 ///
 
-app.post("/fakeauth", (req, res) => {
+// app.post("/fakeauth", (req, res) => {
+//   console.log(`req.query post ${req.query}`);
+
+//   const responseurl = util.format(
+//     "%s?code=%s&state=%s",
+//     decodeURIComponent(req.query.redirect_uri),
+//     "xxxxxx",
+//     req.query.state
+//   );
+//   console.log(`Set redirect as ${responseurl}`);
+//   res.redirect(`/login?responseurl=${encodeURIComponent(responseurl)}`);
+// });
+
+app.get("/fakeauth", (req, res) => {
+  // console.log("soy el auth", req.body);
+  // const { devicesId } = req.body;
+  // res.send(`Hello, World! 2`);
+  console.log(`req.query get ${req.query}`);
   const responseurl = util.format(
     "%s?code=%s&state=%s",
     decodeURIComponent(req.query.redirect_uri),
@@ -552,19 +571,19 @@ const initServer = async () => {
 
 initServer();
 
-https
-  .createServer(
-    {
-      cert: fs.readFileSync("certificate.pem"),
-      key: fs.readFileSync("key.key"),
-    },
-    app
-  )
-  .listen(port, () => {
-    console.log(`Servidor Express escuchando en https://localhost:${port}`);
-  });
+// https
+//   .createServer(
+//     {
+//       cert: fs.readFileSync("certificate.pem"),
+//       key: fs.readFileSync("key.key"),
+//     },
+//     app
+//   )
+//   .listen(port, () => {
+//     console.log(`Servidor Express escuchando en https://localhost:${port}`);
+//   });
 
 // Inicia el servidor en el puerto especificado
-// app.listen(port, () => {
-//   console.log(`Servidor Express escuchando en http://localhost:${port}`);
-// });
+app.listen(port, () => {
+  console.log(`Servidor Express escuchando en http://localhost:${port}`);
+});
