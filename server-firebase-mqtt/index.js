@@ -298,6 +298,13 @@ appSmarthome.onSync(async (body) => {
       }
     }
   }
+  return {
+    requestId: body.requestId,
+    payload: {
+      agentUserId: USER_ID,
+      devices: deviceitems,
+    },
+  };
   // });
 });
 
