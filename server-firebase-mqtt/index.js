@@ -571,19 +571,19 @@ const initServer = async () => {
 
 initServer();
 
-// https
-//   .createServer(
-//     {
-//       cert: fs.readFileSync("certificate.pem"),
-//       key: fs.readFileSync("key.key"),
-//     },
-//     app
-//   )
-//   .listen(port, () => {
-//     console.log(`Servidor Express escuchando en https://localhost:${port}`);
-//   });
+https
+  .createServer(
+    {
+      cert: fs.readFileSync("certificate.pem"),
+      key: fs.readFileSync("key.key"),
+    },
+    app
+  )
+  .listen(port, () => {
+    console.log(`Servidor Express escuchando en https://localhost:${port}`);
+  });
 
 // Inicia el servidor en el puerto especificado
-app.listen(port, () => {
-  console.log(`Servidor Express escuchando en http://localhost:${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`Servidor Express escuchando en http://localhost:${port}`);
+// });
