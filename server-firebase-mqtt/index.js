@@ -277,8 +277,21 @@ let devicelist;
 devicelist = require("./devices.json");
 const deviceitems = JSON.parse(JSON.stringify(devicelist));
 
-appSmarthome.onSync(async (body) => {
+async function getUserIdOrThrow(headers) {
+  const userId = await getUser(headers);
+  const userExists = await firestore.userExists(userId);
+  if (!userExists) {
+    throw new Error(
+      `User ${userId} has not created an account, so there are no devices`
+    );
+  }
+  return userId;
+}
+
+appSmarthome.onSync(async (body, headers) => {
   const snapshot = await get(child(dbRef, "/"));
+
+  const userId = await getUserIdOrThrow(headers);
 
   console.log(snapshot.val());
   // firebaseRef.once("value", (snapshot) => {
@@ -301,7 +314,7 @@ appSmarthome.onSync(async (body) => {
   return {
     requestId: body.requestId,
     payload: {
-      agentUserId: USER_ID,
+      agentUserId: userId,
       devices: deviceitems,
     },
   };
@@ -370,8 +383,10 @@ const updateDevice = async (execution, deviceId) => {
   // return ref.update(state).then(() => state); // state = {[stateKey]: value} => {on: true}
 };
 
-appSmarthome.onExecute(async (body) => {
+appSmarthome.onExecute(async (body, headers) => {
   const { requestId } = body;
+  const userId = await getUserIdOrThrow(headers);
+
   // Execution results are grouped by status
   functions.logger.log("Esto es una prueba onExecute");
   const result = {
@@ -401,6 +416,7 @@ appSmarthome.onExecute(async (body) => {
 
   await Promise.all(executePromises);
   return {
+    agentUserId: userId,
     requestId: requestId,
     payload: {
       commands: [result],
