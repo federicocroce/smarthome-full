@@ -37,6 +37,8 @@ const {
 } = require("firebase/database");
 const { google } = require("googleapis");
 
+let publishToMqtt = true;
+
 // const credentials = "./smart-home-key.json"; // Reemplaza con la ruta de tu archivo de credenciales
 
 const credentials = require("./service-account.json");
@@ -121,6 +123,8 @@ clientMqtt.onResponseTopics(({ topic, message }) => {
 
   // clientMqtt.subscribe("update_device");
   if (topic in actionsTopics) {
+    console.log("topic in actionsTopics");
+    publishToMqtt = false;
     actionsTopics[topic]({ topic, message });
   }
 });
@@ -560,7 +564,7 @@ const initServer = async () => {
           requestBody,
         });
 
-        // console.log({ res });
+        console.log({ res });
 
         // const res = await homegraphClient.devices.reportStateAndNotification({
         //   requestBody: {
@@ -577,12 +581,17 @@ const initServer = async () => {
         //     },
         //   },
         // });
-
-        clientMqtt.publish(
-          "mi_topic_local",
-          JSON.stringify({ [deviceId]: data })
-          // JSON.stringify({ [deviceId]: deviceStatus })
-        );
+        if (publishToMqtt) {
+          console.log("SI publica EN MQTT");
+          clientMqtt.publish(
+            "mi_topic",
+            JSON.stringify({ [deviceId]: deviceStatus })
+            // JSON.stringify({ [deviceId]: deviceStatus })
+          );
+        } else {
+          console.log("NO publica EN MQTT");
+          publishToMqtt = true;
+        }
       } catch (error) {
         console.log({ error });
       }

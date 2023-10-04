@@ -92,8 +92,6 @@ clientMqtt.onResponseTopics(({ topic, message }) => {
 
 exports.helloWorld = functions.https.onRequest((request, response) => {
   const { text } = request.body;
-
-  functions.logger.log(`helloWorld`);
   // publish message 'Hello' to topic 'my/test/topic'
   // client.publish("my/test/topic", "Hello");
   clientMqtt.publish("update_device", `Actualizo el disponsitivo ${text}`);
@@ -228,8 +226,14 @@ const deviceitems = JSON.parse(JSON.stringify(devicelist));
 var devicecounter;
 
 app.onSync((body) => {
+  functions.logger.log("Esto es una prueba onSync 1");
+
   firebaseRef.once("value", (snapshot) => {
     const children = snapshot.val();
+    functions.logger.log(
+      "Esto es una prueba onSync firebaseRef children",
+      children
+    );
     for (
       devicecounter = 0;
       devicecounter < deviceitems.length;
@@ -248,6 +252,8 @@ app.onSync((body) => {
       }
     }
   });
+
+  functions.logger.log("Esto es una prueba onSync 2");
 
   return {
     requestId: body.requestId,
@@ -515,58 +521,38 @@ exports.reportstate = functions.database
     // functions.logger.info("SOURCE change.before", change.before);
     // functions.logger.info("SOURCE change.after.data", change.after.data);
     // functions.logger.info("SOURCE change.after.val", change.after.val);
-    const snapshot = change.after.val();
-    // functions.logger.info("SOURCE reportstate snapshot", snapshot);
-    // functions.logger.info("SOURCE reportstate source", snapshot.source);
-
-    // const before = change.before.data();
-    // functions.logger.info("SOURCE reportstate source", before);
-
-    const deviceStatus = Object.values(snapshot).reduce(
-      (accum, curr) => ({ ...accum, ...curr }),
-      {}
-    );
-
-    const requestBody = {
-      requestId: "ff36a3cc" /* Any unique ID */,
-      // requestId: "ff36a3ccsiddhy" /* Any unique ID */,
-      agentUserId: USER_ID /* Hardcoded user ID */,
-      payload: {
-        devices: {
-          states: {
-            /* Report the current state of our light */
-            [context.params.deviceId]: deviceStatus,
-          },
-        },
-      },
-    };
-
-    functions.logger.info("ENTRA A REPORTSTATE", {
-      requestBody,
-      deviceId: context.params.deviceId,
-    });
-
-    const res = await homegraph.devices.reportStateAndNotification({
-      requestBody,
-    });
-
-    clientMqtt.publish(
-      "mi_topic",
-      JSON.stringify({ [context.params.deviceId]: deviceStatus })
-    );
-
-    functions.logger.info("Report state response:", res.status, res.data);
+    // const snapshot = change.after.val();
+    // // functions.logger.info("SOURCE reportstate snapshot", snapshot);
+    // // functions.logger.info("SOURCE reportstate source", snapshot.source);
+    // // const before = change.before.data();
+    // // functions.logger.info("SOURCE reportstate source", before);
+    // const deviceStatus = Object.values(snapshot).reduce(
+    //   (accum, curr) => ({ ...accum, ...curr }),
+    //   {}
+    // );
+    // const requestBody = {
+    //   requestId: "ff36a3cc" /* Any unique ID */,
+    //   // requestId: "ff36a3ccsiddhy" /* Any unique ID */,
+    //   agentUserId: USER_ID /* Hardcoded user ID */,
+    //   payload: {
+    //     devices: {
+    //       states: {
+    //         /* Report the current state of our light */
+    //         [context.params.deviceId]: deviceStatus,
+    //       },
+    //     },
+    //   },
+    // };
+    // functions.logger.info("ENTRA A REPORTSTATE", {
+    //   requestBody,
+    //   deviceId: context.params.deviceId,
+    // });
+    // const res = await homegraph.devices.reportStateAndNotification({
+    //   requestBody,
+    // });
+    // clientMqtt.publish(
+    //   "mi_topic",
+    //   JSON.stringify({ [context.params.deviceId]: deviceStatus })
+    // );
+    // functions.logger.info("Report state response:", res.status, res.data);
   });
-
-// exports.ping = functions.https.onRequest((request, response) => {
-//   app.onExecute()
-//   // const { text } = request.body;
-//   // client.subscribe("ping/onExecute");
-//   // client.subscribe("mi_topic");
-
-//   // // publish message 'Hello' to topic 'my/test/topic'
-//   // client.publish("my/test/topic", "Hello");
-//   // client.publish("mi_topic", `Hola desde el server ${text}`);
-
-//   response.status(200).send("ok");
-// });
