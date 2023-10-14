@@ -71,18 +71,18 @@ def init_device():
     try:
         response = urequests.get('https://www.smarthome-fc.com.ar:8443/getAllDevices', headers = {'content-type': 'application/json'}, data=params_json)
         res = ujson.loads(response.content)
-        print("res", res)
+#         print("res", res)
         
         for device_id in res.keys():
             deviceStatus = {}
             deviceStatus[device_id] = {}
-            print('init_device 1', deviceStatus)
+#             print('init_device 1', deviceStatus)
     #         firebase.get(device_id, device_id, bg=False, id=0, cb=None, limit=False)
             device_data = res[device_id]
             print('init_device 2', device_data)
             for key in device_data.keys():
                 deviceStatus[device_id].update(device_data[key])
-            print(deviceStatus)
+            print("deviceStatus", deviceStatus)
             set_device(deviceStatus)	
     except OSError as e:
         print("OSError", e)

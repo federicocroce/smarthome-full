@@ -1,6 +1,8 @@
 import machine
 import network
 import utime as time
+from MQTT import get_mqtt
+
 
 wifi = None
 
@@ -34,7 +36,8 @@ def wifi_init(ssid,password, led=None):
         print("Conexión WiFi establecida. Dirección IP:", sta_if.ifconfig()[0])
         if(led):
             led.on()
-
+            
+            
     def handle_wifi_disconnect():
         print("¡Se ha perdido la conexión WiFi!")
         if(led):
@@ -50,6 +53,26 @@ def wifi_init(ssid,password, led=None):
             led.on()
 #         machine.reset()
         return
+
+#     def handle_wifi_disconnect():
+#         print("¡Se ha perdido la conexión WiFi!")
+#         mqtt = get_mqtt()
+#         if(led):
+#             led.off()
+#             mqtt["led_mqtt"].off()
+#         while not network.WLAN(network.STA_IF).isconnected():
+#             led.on()
+#             time.sleep(0.1)
+#             led.off()
+#             time.sleep(0.1)
+#             pass
+#         print("¡Conexión WiFi restablecida!")
+# #
+# #         mqtt["reconnect_mqtt"]()
+#         if(led):
+#             led.on()
+# #         machine.reset()
+#         return
 
     def is_wifi_connected():
         return network.WLAN(network.STA_IF).isconnected()

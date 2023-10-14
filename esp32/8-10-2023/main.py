@@ -8,9 +8,9 @@ from machine import Pin
 from DimmerPWM import DimmerPWM
 import utime as time
 from UtilitiesRGB import spectrumrgb_to_rgb_limit_100, configurar_temperatura_color
-from WiFi import set_wifi, get_wifi
+from WiFi import set_wifi
 # import WiFi
-from MQTT import connect_mqtt
+from MQTT import set_mqtt, get_mqtt
 from Delay import delay_seconds
 from DeviceConfig import set_device, init_device, device_config
 from Touch import Touch
@@ -105,16 +105,10 @@ init_device()
 # # ssl_params["cadata"] = CERTIFICATE
 # ssl_params["server_hostname"] = mqtt_server
 # Conectar al broker MQTT
-(mqtt_client, check_mqtt_connection, reconnect_mqtt, update_device) = connect_mqtt(
-    client_id, mqtt_server, mqtt_user, mqtt_password, LED_MQTT)
+mqtt = set_mqtt(client_id, mqtt_server, mqtt_user, mqtt_password, "mi_topic", callback, LED_MQTT)
+
 
 # Establecer la función de callback
-mqtt_client.set_callback(callback)
-
-
-# Suscribirse a un topic
-mqtt_topic = "mi_topic"
-mqtt_client.subscribe(mqtt_topic)
 
 # Publicar un mensaje
 # mqtt_client.publish(mqtt_topic, "Hola desde ESP32")
@@ -124,12 +118,12 @@ mqtt_client.subscribe(mqtt_topic)
 def dimmer_led():
 #     firebase.patch("led1", {"Brightness": {"brightness": 50}}, bg=False, id=1, cb=None)
     print("Setea el brillo")
-    mqtt_client.publish(mqtt_topic, "Hola desde ESP32")
+#     mqtt_client.publish(mqtt_topic, "Hola desde ESP32")
     while True:
         try:
 #             print('Entra #al thread', device_config['led1']['device']['increase_decrease_touch'])
             # Controla la intensidad del LED
-            device_config['led1']['device']['increase_decrease_touch'](touch_increase, touch_decrease, update_device)
+            device_config['led1']['device']['increase_decrease_touch'](touch_increase, touch_decrease)
             time.sleep_ms(20)
         except KeyboardInterrupt:
             print("\nBucle interrumpido por el usuario.")
@@ -141,7 +135,8 @@ def reset():
     print("Resetting...")
     time.sleep(5)
     machine.reset()
-
+    
+    
 def main():
     cbk_dimmer = None
     COUNT = 0
@@ -150,12 +145,12 @@ def main():
         try:
             # Check for MQTT messages and perform non-blocking tasks
             if is_wifi_connected():
-                print("is_wifi_connected()", is_wifi_connected())
+#                 print("is_wifi_connected()", is_wifi_connected())
                 # if COUNT == 0 and not mqtt_client.ping():
                 #    reset()
 #                 delay_seconds(dimmer_led, 0.5)
-                check_mqtt_connection()
-                mqtt_client.check_msg()
+                mqtt["check_mqtt_connection"]()
+                mqtt["mqtt_client"].check_msg()
                 # mqtt_client.wait_msg()
 #                 print("Check msg", COUNT)
                 COUNT = COUNT + 1                
@@ -179,6 +174,7 @@ if __name__ == "__main__":
         _thread.interrupt(led_thread)
         print("KeyboardInterrupt Fede", e)
         reset()
+
 
 # while True:
 #     # print('Entra 1')
@@ -223,15 +219,4 @@ if __name__ == "__main__":
 #     time.sleep(1)
     
     
-    
-
-# from machine import Pin
-# 
-# red = Pin(5, Pin.OUT) 
-# green = Pin(18, Pin.OUT)
-# blue = Pin(19, Pin.OUT)  
-# 
-# red.on()
-# green.on()
-# blue.on()
     

@@ -1,5 +1,7 @@
 import math
 from DimmerPWM import DimmerPWM
+from WiFi import get_wifi
+from MQTT import get_mqtt
 
 def calc_rgb_brightness(spectrumrgb, brightness):
     real_percent = ((spectrumrgb * 100) / 255)
@@ -55,7 +57,7 @@ def format_led_rgb(pin_red, pin_green, pin_blue, led_name):
     is_on = False
     temperature = None
     led_name= led_name
-        
+
     def set_led_values(new_spectrumrgb, new_brightness, new_is_on, new_temperature ):
         nonlocal spectrumrgb
         nonlocal brightness
@@ -85,17 +87,21 @@ def format_led_rgb(pin_red, pin_green, pin_blue, led_name):
     
 
     
-    def increase_decrease_touch(touch_increase, touch_decrease, update_device):
+    def increase_decrease_touch(touch_increase, touch_decrease):
 #         print('touch_increase', touch_increase)
 #         print('touch_decrease', touch_decrease)
 #         mqtt_client.publish('update_device', 'UPDATE')
 #         mqtt_client.publish('update_device', {"Brightness": {"brightness": brightness}})
         
         def callback():
-
-            update_device(led_name, {"Brightness": {"brightness": brightness}})
-            # mqtt_client.publish('update_device', 'UPDATE')
-            print("Envío al servidor", led_name, brightness )
+            (handle_wifi_disconnect, is_wifi_connected) = get_wifi()
+            mqtt = get_mqtt()
+#             print("update_device Utilities", update_device)
+#             print("is_wifi_connected", is_wifi_connected())
+            if is_wifi_connected() and "update_device" in mqtt :
+                mqtt["update_device"](led_name, {"Brightness": {"brightness": brightness}})
+                # mqtt_client.publish('update_device', 'UPDATE')
+                print("Envío al servidor", led_name, brightness )
 
         is_touching_increase = touch_increase.is_touching(callback)
         is_touching_decrease = touch_decrease.is_touching(callback)
