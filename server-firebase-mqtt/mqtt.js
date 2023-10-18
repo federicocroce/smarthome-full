@@ -10,9 +10,9 @@ var options = {
 
 const mqttTopics = {
   mi_topic: "mi_topic",
-  mi_topic_response: "mi_topic_response",
   update_device: "update_device",
-  update_device_response: "update_device_response",
+  status: "status",
+  reconnect: "reconnect",
 };
 // functions.logger.log("Esto es una prueba onExecute");
 

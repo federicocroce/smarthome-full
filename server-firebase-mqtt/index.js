@@ -24,6 +24,7 @@ const util = require("util");
 
 const express = require("express");
 const { clientMqtt, mqttTopics } = require("./mqtt");
+const { bot, sendTelegramMessage } = require("./telegram");
 // Import the functions you need from the SDKs you need
 const { initializeApp } = require("firebase/app");
 const bodyParser = require("body-parser");
@@ -111,11 +112,25 @@ const actionsTopics = {
       () => state
     );
   },
+  [mqttTopics.status]: ({ topic, message }) => {
+    const messageFormatted = JSON.parse(message);
+    console.log(topic, messageFormatted);
+
+    sendTelegramMessage(JSON.stringify(messageFormatted));
+  },
+  [mqttTopics.reconnect]: ({ topic, message }) => {
+    // const messageFormatted = JSON.parse(message);
+    console.log(topic, message.toString("utf-8"));
+
+    sendTelegramMessage(message.toString("utf-8"));
+  },
 };
 
 setTimeout(() => {
   console.log("Sus");
   clientMqtt.subscribe(mqttTopics.update_device);
+  clientMqtt.subscribe(mqttTopics.status);
+  clientMqtt.subscribe(mqttTopics.reconnect);
 }, 1000);
 
 clientMqtt.onResponseTopics(({ topic, message }) => {
@@ -141,11 +156,24 @@ const getAllDevices = async () => {
   return snapshot.val();
 };
 
+bot.command("deviceStatus", async (ctx) => {
+  console.log("deviceStatus");
+  clientMqtt.publish(
+    "device_status",
+    "obtiene el estado"
+    // JSON.stringify({ [deviceId]: deviceStatus })
+  );
+
+  // const devicesData = await getAllDevices();
+  // ctx.reply(JSON.stringify(devicesData));
+});
+
 app.get("/getAllDevices", async (req, res) => {
   console.log(req.body);
   // const { devicesId } = req.body;
 
   const devicesData = await getAllDevices();
+  // sendTelegramMessage(JSON.stringify(devicesData));
 
   res.status(200).send(devicesData);
 });
