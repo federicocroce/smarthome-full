@@ -105,12 +105,17 @@ const actionsTopics = {
     console.log(topic, messageFormatted);
     const { device: deviceId, value } = messageFormatted;
 
-    const [traitName, keyValue] = Object.entries(value)[0];
-    const [key, state] = Object.entries(keyValue)[0];
+    Object.entries(value).forEach((val) => {
+      const [traitName, keyValue] = val;
+      const [key, state] = Object.entries(keyValue)[0];
 
-    update(dbRef, { [`/${deviceId}/${traitName}/${key}`]: state }).then(
-      () => state
-    );
+      // console.log("keyValue", keyValue);
+      // console.log("state", state);
+
+      update(dbRef, { [`/${deviceId}/${traitName}/${key}`]: state }).then(
+        () => state
+      );
+    });
   },
   [mqttTopics.status]: ({ topic, message }) => {
     const messageFormatted = JSON.parse(message);
