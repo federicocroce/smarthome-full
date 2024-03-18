@@ -40,6 +40,8 @@ const { google } = require("googleapis");
 
 let publishToMqtt = true;
 
+let lastPingDevices = {};
+
 // const credentials = "./smart-home-key.json"; // Reemplaza con la ruta de tu archivo de credenciales
 
 const credentials = require("./service-account.json");
@@ -173,6 +175,31 @@ bot.command("deviceStatus", async (ctx) => {
   // ctx.reply(JSON.stringify(devicesData));
 });
 
+// setInterval(() => {
+//   const lastUpdate = lastPingDevices["led1"];
+//   console.log(`Send to telegram ${lastUpdate}`);
+//   console.log(`Send to telegram ${lastUpdate}`);
+// }, 1000);
+
+app.get("/deviceIsConnected", async (req, res) => {
+  console.log(req.query.deviceId);
+  // devicesId.forEach((device) => {
+  const device = req.query.deviceId;
+  // });
+  try {
+    const snapshot = await get(child(dbRef, `${device}`));
+    if (snapshot.exists()) {
+      const value = snapshot.val();
+      lastPingDevices[device] = new Date().getTime();
+      res.status(200).send(value);
+    } else {
+      console.log("No data available");
+    }
+  } catch (error) {
+    console.log({ error });
+  }
+});
+
 app.get("/getAllDevices", async (req, res) => {
   console.log(req.body);
   // const { devicesId } = req.body;
@@ -187,10 +214,32 @@ app.post("/getDevicesValue", async (req, res) => {
   console.log("devicesId", req.body);
   const { devicesId } = req.body;
 
-  const promises = devicesId.map((device) => get(child(dbRef, `${device}`)));
-  // devicesId.forEach((device) => {
+  if (!devicesId) res.send("Ids invalidos.");
 
-  // });
+  const promises = devicesId.map((device) => get(child(dbRef, `${device}`)));
+
+  try {
+    const snapshots = await Promise.all(promises);
+    const response = snapshots.reduce((prev, curr, index) => {
+      console.log({ curr });
+      return {
+        ...prev,
+        [devicesId[index]]: curr?.val(),
+      };
+    }, {});
+    console.log({ response });
+    res.send(response);
+  } catch (error) {
+    console.log({ error });
+  }
+});
+
+app.get("/getDevicesValue", async (req, res) => {
+  const devicesId = req.query.devicesId.split(",");
+  console.log(devicesId);
+
+  const promises = devicesId.map((device) => get(child(dbRef, `${device}`)));
+
   try {
     const snapshots = await Promise.all(promises);
     const response = snapshots.reduce((prev, curr, index) => {
