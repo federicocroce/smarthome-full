@@ -9,10 +9,11 @@ var options = {
 };
 
 const mqttTopics = {
-  mi_topic: "mi_topic",
-  update_device: "update_device",
-  status: "status",
-  reconnect: "reconnect",
+  mi_topic: { name: "mi_topic", hasSubscribe: false },
+  update_device: { name: "update_device", hasSubscribe: true },
+  status: { name: "status", hasSubscribe: true },
+  reconnect: { name: "reconnect", hasSubscribe: true },
+  sendTelegramMessage: { name: "sendTelegramMessage", hasSubscribe: true },
 };
 // functions.logger.log("Esto es una prueba onExecute");
 

@@ -102,7 +102,7 @@ const commands = {
 };
 
 const actionsTopics = {
-  [mqttTopics.update_device]: ({ topic, message }) => {
+  [mqttTopics?.update_device?.name]: ({ topic, message }) => {
     const messageFormatted = JSON.parse(message);
     console.log(topic, messageFormatted);
     const { device: deviceId, value } = messageFormatted;
@@ -111,33 +111,40 @@ const actionsTopics = {
       const [traitName, keyValue] = val;
       const [key, state] = Object.entries(keyValue)[0];
 
-      // console.log("keyValue", keyValue);
-      // console.log("state", state);
-
       update(dbRef, { [`/${deviceId}/${traitName}/${key}`]: state }).then(
         () => state
       );
     });
   },
-  [mqttTopics.status]: ({ topic, message }) => {
+  [mqttTopics?.status?.name]: ({ topic, message }) => {
     const messageFormatted = JSON.parse(message);
     console.log(topic, messageFormatted);
 
     sendTelegramMessage(JSON.stringify(messageFormatted));
   },
-  [mqttTopics.reconnect]: ({ topic, message }) => {
-    // const messageFormatted = JSON.parse(message);
+  [mqttTopics?.reconnect?.name]: ({ topic, message }) => {
     console.log(topic, message.toString("utf-8"));
-
     sendTelegramMessage(message.toString("utf-8"));
+  },
+  [mqttTopics?.sendTelegramMessage?.name]: ({ topic, message }) => {
+    console.log("sendTelegramMessage", { topic, message });
+    if (typeof message.toString("utf-8") === "string") {
+      sendTelegramMessage(message.toString("utf-8"));
+    } else {
+      const messageFormatted = JSON.parse(message);
+      console.log(topic, messageFormatted);
+
+      sendTelegramMessage(JSON.stringify(messageFormatted));
+    }
   },
 };
 
 setTimeout(() => {
   console.log("Sus");
-  clientMqtt.subscribe(mqttTopics.update_device);
-  clientMqtt.subscribe(mqttTopics.status);
-  clientMqtt.subscribe(mqttTopics.reconnect);
+  Object.entries(mqttTopics).forEach(([, { name, hasSubscribe }]) => {
+    console.log({ name, hasSubscribe });
+    if (hasSubscribe) clientMqtt.subscribe(name);
+  });
 }, 1000);
 
 clientMqtt.onResponseTopics(({ topic, message }) => {
@@ -145,7 +152,7 @@ clientMqtt.onResponseTopics(({ topic, message }) => {
 
   // clientMqtt.subscribe("update_device");
   if (topic in actionsTopics) {
-    console.log("topic in actionsTopics");
+    console.log("topic in actionsTopics", topic);
     publishToMqtt = false;
     actionsTopics[topic]({ topic, message });
   }
@@ -164,28 +171,19 @@ const getAllDevices = async () => {
 };
 
 bot.command("deviceStatus", async (ctx) => {
-  console.log("deviceStatus");
-  clientMqtt.publish(
-    "device_status",
-    "obtiene el estado"
-    // JSON.stringify({ [deviceId]: deviceStatus })
-  );
-
-  // const devicesData = await getAllDevices();
-  // ctx.reply(JSON.stringify(devicesData));
+  /**
+  1- Desde telegram se escribe /deviceStatus.
+  2- El esp32 recibe el topic "device_status" desde el mqtt. 
+  3- El esp32 envia el topic "status" al mqtt con los datos de sus dispositivos.
+  4- El server recibe el topic "status" con los datos del dispositivo y lo en via a Telegram por medio de sendTelegramMessage
+ */
+  console.log("deviceStatus local");
+  clientMqtt.publish("device_status", "obtiene el estado");
 });
-
-// setInterval(() => {
-//   const lastUpdate = lastPingDevices["led1"];
-//   console.log(`Send to telegram ${lastUpdate}`);
-//   console.log(`Send to telegram ${lastUpdate}`);
-// }, 1000);
 
 app.get("/deviceIsConnected", async (req, res) => {
   console.log(req.query.deviceId);
-  // devicesId.forEach((device) => {
   const device = req.query.deviceId;
-  // });
   try {
     const snapshot = await get(child(dbRef, `${device}`));
     if (snapshot.exists()) {
@@ -202,11 +200,7 @@ app.get("/deviceIsConnected", async (req, res) => {
 
 app.get("/getAllDevices", async (req, res) => {
   console.log(req.body);
-  // const { devicesId } = req.body;
-
   const devicesData = await getAllDevices();
-  // sendTelegramMessage(JSON.stringify(devicesData));
-
   res.status(200).send(devicesData);
 });
 
@@ -283,29 +277,7 @@ app.post("/login", (req, res) => {
   res.redirect(responseurl);
 });
 
-// app.use((req, res) => {
-//   res.status(405).send("Method Not Allowed");
-// });
-
-///
-
-// app.post("/fakeauth", (req, res) => {
-//   console.log(`req.query post ${req.query}`);
-
-//   const responseurl = util.format(
-//     "%s?code=%s&state=%s",
-//     decodeURIComponent(req.query.redirect_uri),
-//     "xxxxxx",
-//     req.query.state
-//   );
-//   console.log(`Set redirect as ${responseurl}`);
-//   res.redirect(`/login?responseurl=${encodeURIComponent(responseurl)}`);
-// });
-
 app.get("/fakeauth", (req, res) => {
-  // console.log("soy el auth", req.body);
-  // const { devicesId } = req.body;
-  // res.send(`Hello, World! 2`);
   console.log(`req.query get ${req.query}`);
   const responseurl = util.format(
     "%s?code=%s&state=%s",
@@ -409,10 +381,7 @@ appSmarthome.onSync(async (body, headers) => {
 
 const queryFirebase = async (deviceId) => {
   const snapshot = await get(child(dbRef, deviceId));
-  // const snapshot = await firebaseRef.child(deviceId).once("value");
   const snapshotVal = snapshot.val();
-
-  // var asyncvalue = {};
 
   const deviceValues = Object.entries(snapshotVal).reduce((prev, [, value]) => {
     return {
@@ -461,12 +430,6 @@ const updateDevice = async (execution, deviceId) => {
   const commandName = command.split("action.devices.commands.")[1];
 
   return update(dbRef, `/${deviceId}/${commands[commandName].traitName}`);
-
-  // const ref = firebaseRef
-  //   .child(deviceId)
-  //   .child(commands[commandName].traitName);
-
-  // return ref.update(state).then(() => state); // state = {[stateKey]: value} => {on: true}
 };
 
 appSmarthome.onExecute(async (body, headers) => {
@@ -531,67 +494,6 @@ app.post("/requestsync", async (request, response) => {
     response.status(500).send(`Error requesting sync: ${err}`);
   }
 });
-
-// onValueUpdated("{deviceId}", (event) => {
-//   console.log("onValueUpdated", event.data.val());
-//   // …
-// });
-
-// exports.reportstate = functions.database
-//   .ref("{deviceId}")
-//   .onUpdate(async (change, context) => {
-//     // functions.logger.info("SOURCE change.after", change.after);
-//     // functions.logger.info("SOURCE change.before", change.before);
-//     // functions.logger.info("SOURCE change.after.data", change.after.data);
-//     // functions.logger.info("SOURCE change.after.val", change.after.val);
-//     const snapshot = change.after.val();
-//     // functions.logger.info("SOURCE reportstate snapshot", snapshot);
-//     // functions.logger.info("SOURCE reportstate source", snapshot.source);
-
-//     // const before = change.before.data();
-//     // functions.logger.info("SOURCE reportstate source", before);
-
-//     const deviceStatus = Object.values(snapshot).reduce(
-//       (accum, curr) => ({ ...accum, ...curr }),
-//       {}
-//     );
-
-//     const requestBody = {
-//       requestId: "ff36a3cc" /* Any unique ID */,
-//       // requestId: "ff36a3ccsiddhy" /* Any unique ID */,
-//       agentUserId: USER_ID /* Hardcoded user ID */,
-//       payload: {
-//         devices: {
-//           states: {
-//             /* Report the current state of our light */
-//             [context.params.deviceId]: deviceStatus,
-//           },
-//         },
-//       },
-//     };
-
-//     functions.logger.info("ENTRA A REPORTSTATE", {
-//       requestBody,
-//       deviceId: context.params.deviceId,
-//     });
-
-//     const res = await homegraph.devices.reportStateAndNotification({
-//       requestBody,
-//     });
-
-//     clientMqtt.publish(
-//       "mi_topic",
-//       JSON.stringify({ [context.params.deviceId]: deviceStatus })
-//     );
-
-//     functions.logger.info("Report state response:", res.status, res.data);
-//   });
-
-///////////////////////////////////////////////////
-
-///////////////////////////////////////////////////
-
-// onRequest(app)
 
 const initServer = async () => {
   // console.log("Init server");
