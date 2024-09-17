@@ -3,6 +3,9 @@ import usocket
 import ure
 import time
 import select
+import machine
+import os
+
 
 
 ap_ssid = "WifiManager"
@@ -14,8 +17,28 @@ NETWORK_PROFILES = 'wifi.dat'
 wlan_ap = network.WLAN(network.AP_IF)
 wlan_sta = network.WLAN(network.STA_IF)
 
+# Tiempo de espera para considerar que se ha pulsado el botón por 3 segundos
+RESET_THRESHOLD = 3000  # en milisegundos
+
+# Configuración del pin del botón de reset
+reset_pin = machine.Pin(0, machine.Pin.IN, machine.Pin.PULL_UP)
+
 server_socket = None
 wifi = None
+
+# Función para detectar el reset prolongado
+def detect_reset_long_press(pin):
+    start_time = time.ticks_ms()
+    while reset_pin.value() == 0:  # Espera hasta que el botón de reset se suelte
+        if time.ticks_diff(time.ticks_ms(), start_time) >= RESET_THRESHOLD:
+            print("Reset")
+            os.remove(NETWORK_PROFILES)
+            machine.reset()
+            return
+    print("No reset")
+    
+    # Configura una interrupción para detectar la pulsación del botón de reset
+reset_pin.irq(trigger=machine.Pin.IRQ_FALLING, handler=detect_reset_long_press)
 
 
 def get_connection(led_web_server=None, led_wifi=None):
@@ -40,42 +63,6 @@ def get_connection(led_web_server=None, led_wifi=None):
         except OSError:
             return False
 
-#     def do_ping(ip_address):
-#         icmp_socket = usocket.socket(usocket.AF_INET, usocket.SOCK_RAW, 1)
-#         packet = bytearray(64)
-#         packet[0] = 0x08  # Tipo de mensaje ICMP (8 para echo request)
-#         packet[1] = 0x00  # Código (siempre 0 para echo request)
-#         packet[2:4] = b'\x00\x00'  # Checksum inicial (bytes en lugar de entero)
-#         packet[4:6] = (1234).to_bytes(2, 'big')  # ID aleatorio
-#         packet[6:8] = (1).to_bytes(2, 'big')  # Número de secuencia
-#         # Llenar el paquete con datos
-#         for i in range(8, len(packet)):
-#             packet[i] = i & 0xff
-#         # Calcular el checksum
-#         checksum = 0
-#         for i in range(0, len(packet), 2):
-#             checksum += packet[i] * 256 + packet[i+1]
-#         checksum = (checksum & 0xffff) + (checksum >> 16)
-#         checksum = (~checksum) & 0xffff
-#         packet[2:4] = checksum.to_bytes(2, 'big')
-#         # Enviar el paquete ICMP
-#         icmp_socket.sendto(packet, (ip_address, 1))
-#         start_time = time.ticks_ms()
-#         # Esperar la respuesta
-#         while True:
-#             ready = select.select([icmp_socket], [], [], 1)
-#             if ready[0]:
-#                 response, addr = icmp_socket.recvfrom(1024)
-#                 elapsed_time = time.ticks_ms() - start_time
-#                 print('Respuesta recibida desde', addr, 'en', elapsed_time, 'ms')
-#                 return True  # Se recibió una respuesta
-#                 break
-#             elif time.ticks_ms() - start_time > 1000:
-#                 print('Tiempo de espera agotado.')
-#                 return False  # Tiempo de espera agotado sin respuesta
-#                 break
-#         icmp_socket.close()
-    
     
     def is_wifi_connected():
         return wlan_sta.isconnected()
@@ -83,10 +70,11 @@ def get_connection(led_web_server=None, led_wifi=None):
     def is_wifi_network_connected():
         if is_wifi_connected():
             pin_response = do_ping()
-            print("Conectado a la red:", wlan_sta.config("essid"))
-            print("ping('a google')", pin_response)
+#             print("Conectado a la red:", wlan_sta.config("essid"))
+#             print("ping('a google')", pin_response)
             if pin_response:
-                print("Conexión a Internet establecida.")
+#                 print("Conexión a Internet establecida.")
+                led_wifi.on()
                 return True 
             else:
                 print("Conexión a la red local pero sin acceso a Internet.")
@@ -109,12 +97,16 @@ def get_connection(led_web_server=None, led_wifi=None):
         
         
     def read_profiles():
+        print("Entra a read_profiles")
         with open(NETWORK_PROFILES) as f:
+            print("Entra a read_profiles 1")
             lines = f.readlines()
+        print("Entra a read_profiles 2")
         profiles = {}
         for line in lines:
             ssid, password = line.strip("\n").split(";")
             profiles[ssid] = password
+        print("profiles", profiles)
         return profiles
 
 
@@ -173,11 +165,11 @@ def get_connection(led_web_server=None, led_wifi=None):
     def handle_root(client):
         global wlan_sta
         wlan_sta.active(True)
-        print('wlan_sta.scan()', wlan_sta.scan())
-        print('network.WLAN(network.STA_IF).scan()', network.WLAN(network.STA_IF).scan())
+#         print('wlan_sta.scan()', wlan_sta.scan())
+#         print('network.WLAN(network.STA_IF).scan()', network.WLAN(network.STA_IF).scan())
         network.WLAN(network.STA_IF)
         ssids = sorted(ssid.decode('utf-8') for ssid, *_ in wlan_sta.scan())
-        print("ssids",ssids)
+#         print("client", client)
         send_header(client)
         client.sendall("""\
             <html>
@@ -190,6 +182,9 @@ def get_connection(led_web_server=None, led_wifi=None):
                     <table style="margin-left: auto; margin-right: auto;">
                         <tbody>
         """)
+        ssids = list(filter(str.strip, ssids))
+        print("ssids",ssids)
+#         ssids =  ['', 'ARTEMARTINELLI', 'Ale Mandolesi 4D', 'AliciaBarrienuevo 2.4GHz', 'BROADCOM_GUEST_0_2', 'Fibertel WiFi304 2.4GHz', 'Fibertel WiFi478 2.4GHz', 'Flia Callapa', 'GimenezRey-2.4Ghz', 'Personal Wifi Zone', 'Personal Wifi Zone', 'Personal Wifi Zone', 'Personal-267', 'Personal-808', 'Personal-WiFi-228-2.4Ghz', 'Personal-WiFi-683-2.4Ghz', 'TeleCentro Wifi', 'Telecentro-e198', 'casa martinez', 'sc-9ab6', 'tucuman2236-2.4Ghz']
         while len(ssids):
             ssid = ssids.pop(0)
             client.sendall("""\
@@ -318,7 +313,7 @@ def get_connection(led_web_server=None, led_wifi=None):
     def start(led_web_server, port=80):
         global server_socket
 
-        addr = socket.getaddrinfo('0.0.0.0', port)[0][-1]
+        addr = usocket.getaddrinfo('0.0.0.0', port)[0][-1]
 
         stop()
 
@@ -327,13 +322,13 @@ def get_connection(led_web_server=None, led_wifi=None):
 
         wlan_ap.config(essid=ap_ssid, password=ap_password, authmode=ap_authmode)
 
-        server_socket = socket.socket()
+        server_socket = usocket.socket()
         server_socket.bind(addr)
         server_socket.listen(1)
 
-        print('Connect to WiFi ssid ' + ap_ssid + ', default password: ' + ap_password)
+#         print('Connect to WiFi ssid ' + ap_ssid + ', default password: ' + ap_password)
         print('and access the ESP via your favorite web browser at 192.168.4.1.')
-        print('Listening on:', addr)
+#         print('Listening on:', addr)
 
         while True:
             if wlan_sta.isconnected():
@@ -341,7 +336,7 @@ def get_connection(led_web_server=None, led_wifi=None):
                 return True
             led_web_server.on()
             client, addr = server_socket.accept()
-            print('client connected from', addr)
+#             print('client connected from', addr)
             try:
                 client.settimeout(5.0)
 
@@ -359,7 +354,7 @@ def get_connection(led_web_server=None, led_wifi=None):
                 except OSError:
                     pass
 
-                print("Request is: {}".format(request))
+#                 print("Request is: {}".format(request))
                 if "HTTP" not in request:  # skip invalid requests
                     continue
 
@@ -368,7 +363,7 @@ def get_connection(led_web_server=None, led_wifi=None):
                     url = ure.search("(?:GET|POST) /(.*?)(?:\\?.*?)? HTTP", request).group(1).decode("utf-8").rstrip("/")
                 except Exception:
                     url = ure.search("(?:GET|POST) /(.*?)(?:\\?.*?)? HTTP", request).group(1).rstrip("/")
-                print("URL is {}".format(url))
+#                 print("URL is {}".format(url))
 
                 if url == "":
                     handle_root(client)
@@ -385,16 +380,21 @@ def get_connection(led_web_server=None, led_wifi=None):
     # First check if there already is any connection:
     if wlan_sta.isconnected():
         return wlan_sta
-
+    print("ENTRAAA 1")
     connected = False
     try:
+        print("ENTRAAA 2")
         # ESP connecting to WiFi takes time, wait a bit and try again:
         time.sleep(1)
+        print("wlan_sta.isconnected()", wlan_sta.isconnected())
         if wlan_sta.isconnected():
             return wlan_sta
 
         # Read known network profiles from file
+        print("profiles before")
         profiles = read_profiles()
+        
+        print("PROFILES", profiles)
 
         # Search WiFis in range
         wlan_sta.active(True)
@@ -417,12 +417,13 @@ def get_connection(led_web_server=None, led_wifi=None):
                 connected = do_connect(ssid, None, blinking_led, set_leds_on_wifi_connected)
             if connected:
                 break
-
+    #Como no encuntra profile sale por la excep y continua con el start()
     except OSError as e:
         print("exception", str(e))
 
     # start web server for connection manager:
     if not connected:
+        print("connected 1")
         connected = start(led_web_server)
         
     wifi = (wlan_sta, is_wifi_connected, handle_wifi_connection, is_wifi_network_connected) if connected else None
