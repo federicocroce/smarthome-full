@@ -153,7 +153,8 @@ clientMqtt.onResponseTopics(({ topic, message }) => {
   // clientMqtt.subscribe("update_device");
   if (topic in actionsTopics) {
     console.log("topic in actionsTopics", topic);
-    publishToMqtt = false;
+
+    // publishToMqtt = mqttTopics[topic].publishToMqtt || false;
     actionsTopics[topic]({ topic, message });
   }
 });
@@ -548,7 +549,7 @@ const initServer = async () => {
           requestBody,
         });
 
-        console.log({ res });
+        // console.log({ res });
 
         // const res = await homegraphClient.devices.reportStateAndNotification({
         //   requestBody: {
@@ -565,17 +566,17 @@ const initServer = async () => {
         //     },
         //   },
         // });
-        if (publishToMqtt) {
-          console.log("SI publica EN MQTT");
-          clientMqtt.publish(
-            "mi_topic",
-            JSON.stringify({ [deviceId]: deviceStatus })
-            // JSON.stringify({ [deviceId]: deviceStatus })
-          );
-        } else {
-          console.log("NO publica EN MQTT");
-          publishToMqtt = true;
-        }
+        // if (publishToMqtt) {
+        console.log("SI publica EN MQTT");
+        clientMqtt.publish(
+          mqttTopics?.mi_topic?.name,
+          JSON.stringify({ [deviceId]: deviceStatus })
+          // JSON.stringify({ [deviceId]: deviceStatus })
+        );
+        // } else {
+        //   console.log("NO publica EN MQTT");
+        //   publishToMqtt = true;
+        // }
       } catch (error) {
         console.log({ error });
       }
