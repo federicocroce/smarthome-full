@@ -9,11 +9,19 @@ var options = {
 };
 
 const mqttTopics = {
-  mi_topic: { name: "mi_topic", hasSubscribe: false },
-  update_device: { name: "update_device", hasSubscribe: true },
-  status: { name: "status", hasSubscribe: true },
-  reconnect: { name: "reconnect", hasSubscribe: true },
-  sendTelegramMessage: { name: "sendTelegramMessage", hasSubscribe: true },
+  mi_topic: { name: "mi_topic", hasSubscribe: false, publishToMqtt: true },
+  update_device: {
+    name: "update_device",
+    hasSubscribe: true,
+    publishToMqtt: true,
+  },
+  status: { name: "status", hasSubscribe: true, publishToMqtt: true },
+  reconnect: { name: "reconnect", hasSubscribe: true, publishToMqtt: false },
+  sendTelegramMessage: {
+    name: "sendTelegramMessage",
+    hasSubscribe: true,
+    publishToMqtt: false,
+  },
 };
 // functions.logger.log("Esto es una prueba onExecute");
 
@@ -29,13 +37,13 @@ client.on("error", function (error) {
   console.log(error);
 });
 
-client.on("message", function (topic, message) {
-  console.log(`onMessage individual`);
-  // client.publish(
-  //   "mi_topic_response",
-  //   `${topic} desde la api : ${message.toString()}`
-  // );
-});
+// client.on("message", function (topic, message) {
+//   console.log(`onMessage individual`);
+//   // client.publish(
+//   //   "mi_topic_response",
+//   //   `${topic} desde la api : ${message.toString()}`
+//   // );
+// });
 
 client.onResponseTopics = (cbk) => {
   console.log(`onResponseTopics`);
