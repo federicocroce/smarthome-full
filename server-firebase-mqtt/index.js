@@ -103,6 +103,7 @@ const commands = {
 
 const actionsTopics = {
   [mqttTopics?.update_device?.name]: ({ topic, message }) => {
+    publishToMqtt = false;
     const messageFormatted = JSON.parse(message);
     console.log(topic, messageFormatted);
     const { device: deviceId, value } = messageFormatted;
@@ -512,6 +513,12 @@ const initServer = async () => {
         if (deviceKeys.length === index + 1) firstCall = false;
         return;
       }
+
+      if (!publishToMqtt) {
+        publishToMqtt = true;
+        return;
+      }
+
       const data = snapshot.val();
       const deviceId = snapshot.key;
 

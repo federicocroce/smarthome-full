@@ -136,38 +136,42 @@ def format_led_rgb(pin_red, pin_green, pin_blue, led_name):
         blue.set_dimmer(color_blue, is_on)
 
     def update_device():
-        nonlocal brightness
-        nonlocal is_on
-        nonlocal spectrumrgb
-        nonlocal temperature
-
-        print('update_device brightness', brightness)
-        print('update_device is_on', is_on)
-        print('update_device spectrumrgb', spectrumrgb)
-        print('update_device temperature', temperature)
-
-        json_data = {
-            "OnOff": {"on": is_on},
-            "Brightness": {"brightness": brightness},
-            "ColorSetting": {}
-        }
-
-        if spectrumrgb is not None:
-            json_data["ColorSetting"] = {
-                "color": {
-                    "spectrumRGB": spectrumrgb
-                }
-            }
-        elif temperature is not None:
-            json_data["ColorSetting"] = {
-                "color": {
-                    "temperature": temperature
-                }
-            }
 
         if wifi.is_connected:
-            mqtt.update_device(led_name, json_data)
-            print("Envío al servidor", led_name, brightness, is_on)
+            nonlocal brightness
+            nonlocal is_on
+            nonlocal spectrumrgb
+            nonlocal temperature
+
+            print('update_device brightness', brightness)
+            print('update_device is_on', is_on)
+            print('update_device spectrumrgb', spectrumrgb)
+            print('update_device temperature', temperature)
+
+            json_data = {
+                "OnOff": {"on": is_on},
+                "Brightness": {"brightness": brightness},
+                "ColorSetting": {}
+            }
+
+            if spectrumrgb is not None:
+                json_data["ColorSetting"] = {
+                    "color": {
+                        "spectrumRGB": spectrumrgb
+                    }
+                }
+            elif temperature is not None:
+                json_data["ColorSetting"] = {
+                    "color": {
+                        "temperature": temperature
+                    }
+                }
+
+            if "update_device" in mqtt:
+                mqtt.update_device(led_name, json_data)
+                print("Envío al servidor", led_name, brightness, is_on)
+        else:
+            print("No se puede enviar la data del led xq no hay internet")
 
     def dimmer_touch(dimmer_touch_pin):
         nonlocal brightness
@@ -266,4 +270,4 @@ def format_led_rgb(pin_red, pin_green, pin_blue, led_name):
         dimmer_touch_pin.is_touching((callback_pulse, callback_two_touching, callback_three_touching),
                                      callback_update_server, callback_dimmer)
 
-    return {'led': (red, green, blue), 'set_led_values': set_led_values, 'get_status': get_status, 'update_device': update_device, 'dimmer_touch': dimmer_touch}
+    return {'led': (red, green, blue), 'set_led_values': set_led_values, 'get_status': get_status, 'dimmer_touch': dimmer_touch}

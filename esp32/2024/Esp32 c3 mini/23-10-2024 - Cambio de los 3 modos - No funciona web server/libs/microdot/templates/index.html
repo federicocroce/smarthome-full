@@ -1,0 +1,31 @@
+{% args networks %}
+<!doctype html>
+<html>
+  <head>
+    <title>Microdot + uTemplate example</title>
+    <meta charset="UTF-8">
+  </head>
+  <body>
+      <div>
+        <h2>Configurar Nombre del Dispositivo</h2>
+        <form action="/save" method="post">
+            <label for="device_name">Nombre del Dispositivo:</label><br>
+            <input type="text" id="device_name" name="device_name"><br><br>
+            
+            <div>
+                <p>Redes WIFI disponibiles:</p>
+                
+                {% for ssid in networks %}
+                    <input type="radio" id="ssid-{{ ssid }}" name="ssid" value="{{ ssid }}">
+                    <label for="ssid-{{ ssid }}">{{ ssid }}</label><br>
+                {% endfor %}
+                
+            </div>
+            
+            <input type="text" id="password" name="password"><br><br>
+            
+            <input type="submit" value="Guardar">
+        </form>
+       </div>
+  </body>
+</html>
